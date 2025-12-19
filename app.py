@@ -60,7 +60,7 @@ def chat():
     full_prompt = f"{systemContext}\n\nCONVERSATION HISTORY:\n{conversation_so_far}\n\nCURRENT USER QUERY: {user_msg}\nAI RESPONSE:"
 
     try:
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        model = genai.GenerativeModel('gemini-2.0-flash-lite')
         response = model.generate_content(full_prompt)
         ai_reply = response.text
 
