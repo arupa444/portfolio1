@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, flash, redirect, url_for, abort, jsonify
+from flask import Flask, render_template, request, flash, redirect, url_for, abort, jsonify, session
 from content import profile, projects, skills, systemContext
 import google.generativeai as genai
 import os
@@ -40,27 +40,38 @@ def contact():
     return redirect(url_for('index', _anchor='contact'))
 
 
-# --- CHATBOT API ---
 @app.route('/chat', methods=['POST'])
 def chat():
     if not GENAI_KEY:
         return jsonify({'response': "AI System Offline (Missing API Key). Contact Admin."})
 
     user_msg = request.json.get('message', '')
-    if not user_msg:
-        return jsonify({'response': "Empty signal received."})
+
+    # --- CONTEXT LOGIC ---
+    # Retrieve history from session or initialize empty list
+    history = session.get('chat_history', [])
+
+    # Create the prompt with history
+    # We format history as a dialogue script to keep context
+    conversation_so_far = ""
+    for turn in history[-10:]:  # Keep last 10 turns to save tokens
+        conversation_so_far += f"User: {turn['user']}\nAI: {turn['ai']}\n"
+
+    full_prompt = f"{systemContext}\n\nCONVERSATION HISTORY:\n{conversation_so_far}\n\nCURRENT USER QUERY: {user_msg}\nAI RESPONSE:"
 
     try:
-        # Using Gemini 1.5 Flash (current standard equivalent for '2.5' request in 2025 context)
         model = genai.GenerativeModel('gemini-1.5-flash')
-
-        # We send the system context + user message
-        full_prompt = f"{systemContext}\n\nUSER INQUIRY: {user_msg}"
-
         response = model.generate_content(full_prompt)
-        return jsonify({'response': response.text})
+        ai_reply = response.text
+
+        # Update History
+        history.append({'user': user_msg, 'ai': ai_reply})
+        session['chat_history'] = history
+
+        return jsonify({'response': ai_reply})
     except Exception as e:
         return jsonify({'response': f"Neural Link Error: {str(e)}"})
+
 
 @app.errorhandler(404)
 def page_not_found(e):
