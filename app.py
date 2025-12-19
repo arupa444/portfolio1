@@ -39,6 +39,11 @@ def contact():
         flash(f'Message received, {name}! I will be in touch.', 'success')
     return redirect(url_for('index', _anchor='contact'))
 
+@app.route('/game')
+def game():
+    return render_template('game.html', profile=profile)
+
+# ... existing routes ...
 
 @app.route('/chat', methods=['POST'])
 def chat():

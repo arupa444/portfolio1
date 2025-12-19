@@ -186,7 +186,10 @@
             I am currently available for freelance work and full-time positions.
             Drop a message if you need high-performance AI systems.
         </p>
-        <form action="{{ url_for('contact') }}" method="POST" class="max-w-md mx-auto space-y-4">
+
+
+        <form action="https://api.web3forms.com/submit" method="POST" class="max-w-md mx-auto space-y-4">
+            <input type="hidden" name="access_key" value="f7ca6d35-c865-46c3-b345-6676ef6197d1">
             <input type="text" name="name" placeholder="Name" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-primary transition-colors text-white">
             <input type="email" name="email" placeholder="Email" class="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-primary transition-colors text-white">
             <textarea name="message" rows="3" placeholder="Project details..." class="w-full bg-white/5 border border-white/10 rounded-xl p-3 focus:outline-none focus:border-primary transition-colors text-white"></textarea>

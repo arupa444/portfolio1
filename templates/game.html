@@ -1,0 +1,628 @@
+{% extends "base.html" %}
+
+{% block content %}
+<!-- Font for the Game (Orbitron looks Cyberpunk) -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+
+<style>
+    /* Game Specific Styles */
+    .game-font { font-family: 'Orbitron', sans-serif; }
+
+    .scanline {
+        position: fixed;
+        left: 0; top: 0; width: 100%; height: 100%;
+        background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
+        background-size: 100% 4px;
+        pointer-events: none;
+        z-index: 50;
+        opacity: 0.3;
+    }
+
+    .vignette {
+        position: fixed;
+        left: 0; top: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.8) 100%);
+        pointer-events: none;
+        z-index: 49;
+    }
+
+    /* Info Modal Animation */
+    @keyframes slideIn {
+        from { transform: translateY(50px); opacity: 0; }
+        to { transform: translateY(0); opacity: 1; }
+    }
+    .modal-anim { animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+
+    .glitch-btn:hover {
+        animation: glitch-anim 0.3s infinite;
+        background-color: #fff;
+        color: #000;
+    }
+    @keyframes glitch-anim {
+        0% { transform: translate(0) }
+        20% { transform: translate(-2px, 2px) }
+        40% { transform: translate(-2px, -2px) }
+        60% { transform: translate(2px, 2px) }
+        80% { transform: translate(2px, -2px) }
+        100% { transform: translate(0) }
+    }
+</style>
+
+<div class="fixed inset-0 w-full h-full bg-[#050505] overflow-hidden select-none">
+
+    <!-- CRT Effects -->
+    <div class="scanline"></div>
+    <div class="vignette"></div>
+
+    <!-- HUD -->
+    <div class="absolute top-24 left-0 w-full px-8 flex justify-between items-start z-40 pointer-events-none">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-widest game-font italic text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">NEURAL DASH</h1>
+            <div class="flex items-center gap-2 mt-2">
+                <div class="w-32 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
+                    <div id="progressBar" class="h-full bg-gradient-to-r from-primary to-secondary w-0 transition-all duration-300"></div>
+                </div>
+                <span class="text-xs text-primary font-mono" id="progressText">0%</span>
+            </div>
+        </div>
+        <div class="text-right">
+            <p class="text-5xl game-font font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]" id="levelDisplay">LVL 01</p>
+            <p class="text-gray-400 text-xs font-mono tracking-widest mt-1">ATTEMPT <span id="attemptDisplay">1</span></p>
+        </div>
+    </div>
+
+    <!-- Canvas -->
+    <canvas id="gameCanvas" class="block w-full h-full z-10"></canvas>
+
+    <!-- Start Screen -->
+    <div id="startScreen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-500">
+        <div class="text-center space-y-6">
+            <h1 class="text-6xl md:text-8xl font-black text-white game-font italic tracking-tighter drop-shadow-[0_0_30px_rgba(168,85,247,0.8)]">
+                NEURAL<span class="text-primary">DASH</span>
+            </h1>
+            <p class="text-gray-300 font-mono text-sm md:text-base max-w-md mx-auto leading-relaxed">
+                Syncing with neural pathways...<br>
+                Avoid the <span class="text-red-500 font-bold">Red Spikes</span>.<br>
+                Complete <span class="text-secondary font-bold">10 Sectors</span> to download Arupa's data.
+            </p>
+            <button onclick="Game.start()" class="glitch-btn px-12 py-4 bg-primary text-white font-bold text-xl rounded clip-path-polygon hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] transition-all game-font tracking-widest uppercase border border-white/20">
+                Initiate
+            </button>
+            <p class="text-xs text-gray-500 font-mono animate-pulse">PRESS [SPACE] OR TAP TO JUMP</p>
+        </div>
+    </div>
+
+    <!-- Info Modal (Level Complete) -->
+    <div id="infoModal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+        <div class="modal-anim max-w-3xl w-full bg-[#0F0B1E] border-2 border-primary/50 rounded-xl shadow-[0_0_100px_rgba(168,85,247,0.2)] overflow-hidden relative">
+            <!-- Background Matrix Effect -->
+            <div class="absolute inset-0 opacity-10 bg-[url('https://media.giphy.com/media/U3qYN8S0j3bpK/giphy.gif')] bg-cover"></div>
+
+            <div class="relative z-10 p-8 md:p-12">
+                <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
+                    <h2 class="text-3xl font-black text-white game-font italic">
+                        SECTOR <span id="modalLevelNum" class="text-primary">01</span> <span class="text-gray-500 text-lg not-italic font-mono ml-2">/ CLEARED</span>
+                    </h2>
+                    <div class="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e] animate-pulse"></div>
+                </div>
+
+                <div class="space-y-4 mb-10">
+                    <h3 id="modalTitle" class="text-2xl font-bold text-white font-mono">Identity Verified</h3>
+                    <p id="modalDesc" class="text-gray-300 text-lg leading-relaxed border-l-4 border-secondary pl-4">
+                        Loading data...
+                    </p>
+                </div>
+
+                <div class="flex justify-end">
+                    <button onclick="Game.nextLevel()" class="px-8 py-3 bg-white text-black font-bold font-mono rounded hover:bg-primary hover:text-white transition-all transform hover:scale-105 shadow-lg">
+                        RESUME SEQUENCE >>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Over -->
+    <div id="gameOver" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center bg-red-900/40 backdrop-blur-sm">
+        <h2 class="text-7xl font-black text-white game-font italic mb-2 text-shadow-red">CRASHED</h2>
+        <p class="text-white font-mono mb-8 bg-red-600/20 px-4 py-2 rounded border border-red-500/50">FATAL EXCEPTION AT SECTOR <span id="failLevel">01</span></p>
+        <button onclick="Game.restartLevel()" class="px-10 py-3 bg-red-600 text-white font-bold rounded hover:bg-red-500 transition-all shadow-[0_0_30px_rgba(220,38,38,0.5)] game-font tracking-wider">
+            RETRY SECTOR
+        </button>
+    </div>
+
+</div>
+
+<script>
+/**
+ * THE CORE ENGINE
+ * Pure JS Canvas Implementation of a Geometry Dash style runner
+ */
+
+// --- DATA: The User's Resume as Game Levels ---
+const LEVEL_DATA = [
+    { title: "WHO AM I?", desc: "I am Arupa Nanda Swain. An AI Engineer who bridges the gap between deep mathematical research and high-scale production systems. I don't just use APIs; I build the intelligence behind them." },
+    { title: "EDUCATION", desc: "B.Tech in Computer Science & Engineering (Honors) from XIM University. My academic focus wasn't just passing exams—it was mastering Algorithms, Data Structures, and Computational Mathematics." },
+    { title: "THE R&D FOUNDATION", desc: "Before production, I spent 2 years in Research. I invented 'Contiguous Clustering' (CC)—a novel sparse matrix storage format that outperforms standard CSR formats by 10x in speed using C++." },
+    { title: "PRODUCTION ENGINEERING", desc: "I currently work at OMICS International USA. I architected an autonomous Multi-LLM pipeline (Gemini/Groq) that reduced manual journal publishing workloads by 60%." },
+    { title: "SYSTEMS AT SCALE", desc: "I built 'The Little Journal' platform for clients linked to The Times of India. I engineered a 'Truth Lens' Fake News Detector that handled real-world traffic and payment gateways." },
+    { title: "PROJECT: JOURNAL AI", desc: "A compound AI system. It takes raw metadata and orchestrates multiple Agents to write, format, and compile full research papers into LaTeX and PDF automatically." },
+    { title: "PROJECT: SWARA VISION", desc: "Blending Culture & Tech. I built a Computer Vision system using Custom CNNs to read Indian Classical Music notation (Devanagari) with 96% accuracy." },
+    { title: "CORE SKILLS: AI", desc: "LLMs (Llama, Gemini), RAG Architectures, LangChain, TensorFlow, PyTorch, Computer Vision (YOLO/OpenCV), and Vector Databases." },
+    { title: "CORE SKILLS: BACKEND", desc: "I build the rails for the AI. Expert in Python (FastAPI/Flask), C++ (High Performance), Docker, Linux, and Cloud Deployment." },
+    { title: "MISSION COMPLETE", desc: "You have decoded the profile. <br><br><strong>Phone:</strong> +91 7735460467<br><strong>Email:</strong> arupaswain7735@gmail.com<br><strong>Status:</strong> Ready to Hire." }
+];
+
+// --- ENGINE CONFIG ---
+const CANVAS = document.getElementById('gameCanvas');
+const CTX = CANVAS.getContext('2d');
+
+const CONFIG = {
+    gravity: 0.6,
+    jumpForce: -10.5,
+    groundHeight: 120,
+    speedBase: 7,
+    speedMax: 10,
+    levelDuration: 800 // Distance units per level
+};
+
+// --- AUDIO (Synthesized) ---
+const AudioEngine = {
+    ctx: new (window.AudioContext || window.webkitAudioContext)(),
+    playJump() {
+        if(this.ctx.state === 'suspended') this.ctx.resume();
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);
+        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.1);
+    },
+    playCrash() {
+        const osc = this.ctx.createOscillator();
+        const gain = this.ctx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(100, this.ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+        osc.connect(gain);
+        gain.connect(this.ctx.destination);
+        osc.start();
+        osc.stop(this.ctx.currentTime + 0.3);
+    }
+};
+
+// --- CLASSES ---
+
+class Player {
+    constructor() {
+        this.size = 40;
+        this.x = 150;
+        this.y = 0;
+        this.dy = 0;
+        this.rotation = 0;
+        this.grounded = false;
+        this.dead = false;
+        this.color = '#A855F7';
+        this.trail = [];
+    }
+
+    update() {
+        if (this.dead) return;
+
+        // Physics
+        this.dy += CONFIG.gravity;
+        this.y += this.dy;
+
+        // Floor Collision
+        const floorY = CANVAS.height - CONFIG.groundHeight - this.size;
+        if (this.y > floorY) {
+            this.y = floorY;
+            this.dy = 0;
+            this.grounded = true;
+
+            // Snap rotation to nearest 90 deg
+            const remainder = this.rotation % (Math.PI / 2);
+            if (remainder !== 0) {
+                this.rotation = Math.round(this.rotation / (Math.PI / 2)) * (Math.PI / 2);
+            }
+        } else {
+            this.grounded = false;
+            // Rotate while jumping
+            this.rotation += 0.15;
+        }
+
+        // Trail Logic
+        this.trail.push({ x: this.x, y: this.y, r: this.rotation, alpha: 0.6 });
+        if (this.trail.length > 8) this.trail.shift();
+    }
+
+    draw() {
+        if (this.dead) return;
+
+        // Draw Trail
+        this.trail.forEach(t => {
+            CTX.save();
+            CTX.translate(t.x + this.size/2, t.y + this.size/2);
+            CTX.rotate(t.r);
+            CTX.fillStyle = `rgba(168, 85, 247, ${t.alpha})`;
+            CTX.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+            CTX.restore();
+            t.alpha -= 0.08;
+        });
+
+        // Draw Player
+        CTX.save();
+        CTX.translate(this.x + this.size/2, this.y + this.size/2);
+        CTX.rotate(this.rotation);
+
+        // Neon Glow
+        CTX.shadowBlur = 20;
+        CTX.shadowColor = this.color;
+
+        // Inner Gradient
+        const grad = CTX.createLinearGradient(-this.size/2, -this.size/2, this.size/2, this.size/2);
+        grad.addColorStop(0, '#A855F7');
+        grad.addColorStop(1, '#06B6D4');
+        CTX.fillStyle = grad;
+
+        CTX.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+
+        // Face (Cute robotic eye)
+        CTX.fillStyle = '#fff';
+        CTX.shadowBlur = 0;
+        CTX.fillRect(5, -5, 8, 8);
+
+        CTX.restore();
+    }
+
+    jump() {
+        if (this.grounded) {
+            this.dy = CONFIG.jumpForce;
+            this.grounded = false;
+            AudioEngine.playJump();
+            // Jump particles
+            Game.spawnParticles(this.x, this.y + this.size, 10, '#fff');
+        }
+    }
+}
+
+class Obstacle {
+    constructor(x, type) {
+        this.x = x;
+        this.type = type; // 'spike' or 'block'
+        this.markedForDeletion = false;
+        this.size = 40;
+    }
+
+    update(speed) {
+        this.x -= speed;
+        if (this.x < -100) this.markedForDeletion = true;
+    }
+
+    draw() {
+        CTX.save();
+        CTX.translate(this.x, CANVAS.height - CONFIG.groundHeight - this.size);
+
+        CTX.shadowBlur = 15;
+        CTX.shadowColor = '#DC2626'; // Red glow
+        CTX.fillStyle = '#DC2626';
+
+        if (this.type === 'spike') {
+            CTX.beginPath();
+            CTX.moveTo(0, this.size);
+            CTX.lineTo(this.size/2, 0);
+            CTX.lineTo(this.size, this.size);
+            CTX.closePath();
+            CTX.fill();
+        } else {
+            CTX.fillRect(0, 0, this.size, this.size);
+            // Detail
+            CTX.fillStyle = '#000';
+            CTX.fillRect(10, 10, this.size-20, this.size-20);
+        }
+        CTX.restore();
+    }
+
+    checkCollision(player) {
+        // Hitbox padding (make it forgiving)
+        const padding = 8;
+        const ox = this.x + padding;
+        const oy = CANVAS.height - CONFIG.groundHeight - this.size + padding;
+        const ow = this.size - padding*2;
+        const oh = this.size - padding*2;
+
+        const px = player.x + padding;
+        const py = player.y + padding;
+        const pw = player.size - padding*2;
+        const ph = player.size - padding*2;
+
+        if (
+            px < ox + ow &&
+            px + pw > ox &&
+            py < oy + oh &&
+            py + ph > oy
+        ) {
+            return true;
+        }
+        return false;
+    }
+}
+
+// --- GAME STATE MANAGEMENT ---
+const Game = {
+    state: 'MENU', // MENU, PLAY, PAUSED, OVER
+    player: null,
+    obstacles: [],
+    particles: [],
+    frame: 0,
+    score: 0,
+    level: 1,
+    currentSpeed: CONFIG.speedBase,
+    levelDistance: 0,
+    bgHue: 250,
+    attempt: 1,
+
+    init() {
+        this.player = new Player();
+        this.resize();
+        window.addEventListener('resize', () => this.resize());
+
+        // Input Handling
+        const jumpAction = (e) => {
+            if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
+            if (this.state === 'PLAY') this.player.jump();
+        };
+        window.addEventListener('keydown', jumpAction);
+        window.addEventListener('mousedown', jumpAction);
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); if(this.state === 'PLAY') this.player.jump(); });
+
+        this.loop();
+    },
+
+    resize() {
+        CANVAS.width = window.innerWidth;
+        CANVAS.height = window.innerHeight;
+    },
+
+    start() {
+        document.getElementById('startScreen').style.opacity = '0';
+        setTimeout(() => document.getElementById('startScreen').style.display = 'none', 500);
+        this.reset();
+        this.state = 'PLAY';
+    },
+
+    reset() {
+        this.player = new Player();
+        this.obstacles = [];
+        this.particles = [];
+        this.score = 0;
+        this.level = 1;
+        this.levelDistance = 0;
+        this.currentSpeed = CONFIG.speedBase;
+        this.frame = 0;
+        this.updateHUD();
+    },
+
+    restartLevel() {
+        document.getElementById('gameOver').classList.add('hidden');
+        this.player = new Player();
+        this.obstacles = []; // Clear obstacles
+        this.levelDistance = 0; // Reset progress for this level only
+        this.state = 'PLAY';
+        this.attempt++;
+        this.updateHUD();
+    },
+
+    spawnObstacle() {
+        // Randomly spawn spikes. Difficulty increases with level.
+        // Logic: Spawn min distance + random.
+        const minGap = 400 - (this.level * 15);
+
+        // Find last obstacle x
+        let lastX = CANVAS.width;
+        if (this.obstacles.length > 0) {
+            lastX = this.obstacles[this.obstacles.length - 1].x;
+        }
+
+        if (CANVAS.width - lastX > minGap) {
+            if (Math.random() < 0.03 + (this.level * 0.005)) {
+                // Determine pattern
+                const type = Math.random() > 0.8 ? 'block' : 'spike';
+
+                // Double spike chance
+                if (Math.random() > 0.7 && this.level > 2) {
+                    this.obstacles.push(new Obstacle(CANVAS.width, 'spike'));
+                    this.obstacles.push(new Obstacle(CANVAS.width + 45, 'spike'));
+                } else {
+                    this.obstacles.push(new Obstacle(CANVAS.width, type));
+                }
+            }
+        }
+    },
+
+    spawnParticles(x, y, count, color) {
+        for(let i=0; i<count; i++) {
+            this.particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 8,
+                vy: (Math.random() - 0.5) * 8,
+                life: 1,
+                color: color
+            });
+        }
+    },
+
+    nextLevel() {
+        document.getElementById('infoModal').classList.add('hidden');
+        if (this.level >= 10) {
+            // End Game logic could go here, but we just let them run forever or restart
+             window.location.href = "/#contact"; // Redirect to hire
+             return;
+        }
+        this.level++;
+        this.levelDistance = 0;
+        this.currentSpeed += 0.5;
+        this.bgHue += 30; // Shift colors
+        this.state = 'PLAY';
+    },
+
+    updateHUD() {
+        document.getElementById('levelDisplay').innerText = `LVL ${this.level.toString().padStart(2, '0')}`;
+        document.getElementById('attemptDisplay').innerText = this.attempt;
+        const progress = Math.min(100, (this.levelDistance / CONFIG.levelDuration) * 100);
+        document.getElementById('progressBar').style.width = `${progress}%`;
+        document.getElementById('progressText').innerText = `${Math.floor(progress)}%`;
+    },
+
+    showLevelInfo() {
+        this.state = 'PAUSED';
+        const data = LEVEL_DATA[this.level - 1];
+
+        document.getElementById('modalLevelNum').innerText = this.level.toString().padStart(2, '0');
+        document.getElementById('modalTitle').innerText = data.title;
+        document.getElementById('modalDesc').innerHTML = data.desc;
+
+        const modal = document.getElementById('infoModal');
+        modal.classList.remove('hidden');
+    },
+
+    gameOver() {
+        this.state = 'OVER';
+        this.player.dead = true;
+        AudioEngine.playCrash();
+        this.spawnParticles(this.player.x, this.player.y, 50, this.player.color);
+
+        // Camera Shake effect (simulated)
+        CANVAS.style.transform = 'translate(5px, 5px)';
+        setTimeout(() => CANVAS.style.transform = 'translate(-5px, -5px)', 50);
+        setTimeout(() => CANVAS.style.transform = 'translate(0, 0)', 100);
+
+        document.getElementById('failLevel').innerText = this.level.toString().padStart(2, '0');
+        setTimeout(() => {
+            document.getElementById('gameOver').classList.remove('hidden');
+        }, 500);
+    },
+
+    drawBackground() {
+        // Gradient Sky
+        const grad = CTX.createLinearGradient(0, 0, 0, CANVAS.height);
+        grad.addColorStop(0, `hsl(${this.bgHue}, 60%, 10%)`);
+        grad.addColorStop(1, `hsl(${this.bgHue}, 60%, 5%)`);
+        CTX.fillStyle = grad;
+        CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
+
+        // Moving Grid Floor
+        CTX.save();
+        CTX.strokeStyle = `hsl(${this.bgHue}, 80%, 50%)`;
+        CTX.lineWidth = 2;
+        CTX.shadowBlur = 10;
+        CTX.shadowColor = `hsl(${this.bgHue}, 80%, 50%)`;
+
+        const groundY = CANVAS.height - CONFIG.groundHeight;
+
+        // Horizontal Line
+        CTX.beginPath();
+        CTX.moveTo(0, groundY);
+        CTX.lineTo(CANVAS.width, groundY);
+        CTX.stroke();
+
+        // Vertical Perspective Lines
+        // Calculate offset based on distance traveled
+        const offset = (this.score * this.currentSpeed) % 100;
+
+        // 3D Grid Effect
+        for (let i = -100; i < CANVAS.width + 100; i += 100) {
+            // Draw lines on the floor plane
+            // Simple parallax: x moves left
+            let x = i - offset;
+
+            // Draw angular lines for perspective
+            CTX.beginPath();
+            CTX.moveTo(x, groundY);
+            // Angle them outwards to look like a floor
+            let bottomX = (x - CANVAS.width/2) * 2 + CANVAS.width/2;
+            CTX.lineTo(bottomX, CANVAS.height);
+            CTX.stroke();
+        }
+        CTX.restore();
+
+        // Background Stars
+        CTX.fillStyle = '#fff';
+        for(let i=0; i<50; i++) {
+             // Deterministic stars based on frame to avoid flickering,
+             // but here we just draw static ones for perf or simple moving ones
+             let sx = (i * 137 + this.frame * 0.5) % CANVAS.width;
+             let sy = (i * 59) % (CANVAS.height - CONFIG.groundHeight);
+             CTX.globalAlpha = Math.sin(this.frame * 0.05 + i) * 0.5 + 0.5;
+             CTX.fillRect(sx, sy, 2, 2);
+        }
+        CTX.globalAlpha = 1;
+    },
+
+    loop() {
+        if (this.state !== 'PAUSED') {
+            CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
+            this.drawBackground();
+
+            if (this.state === 'PLAY') {
+                this.frame++;
+                this.score++;
+                this.levelDistance += 1;
+                this.updateHUD();
+
+                // Level Progress Check
+                if (this.levelDistance > CONFIG.levelDuration) {
+                    this.showLevelInfo();
+                }
+
+                this.spawnObstacle();
+
+                // Player Update
+                this.player.update();
+
+                // Obstacles Update
+                this.obstacles.forEach((obs, index) => {
+                    obs.update(this.currentSpeed);
+                    obs.draw();
+
+                    if (obs.checkCollision(this.player)) {
+                        this.gameOver();
+                    }
+                    if (obs.markedForDeletion) {
+                        this.obstacles.splice(index, 1);
+                    }
+                });
+            }
+
+            // Always Draw Player (even if dead for particle effect)
+            if(this.player) this.player.draw();
+
+            // Particles
+            this.particles.forEach((p, i) => {
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life -= 0.03;
+                CTX.fillStyle = p.color;
+                CTX.globalAlpha = p.life;
+                CTX.fillRect(p.x, p.y, 4, 4);
+                if(p.life <= 0) this.particles.splice(i, 1);
+            });
+            CTX.globalAlpha = 1;
+        }
+
+        requestAnimationFrame(() => this.loop());
+    }
+};
+
+// Initialize
+window.onload = () => Game.init();
+
+</script>
+{% endblock %}
