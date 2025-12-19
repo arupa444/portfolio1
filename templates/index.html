@@ -24,7 +24,7 @@
                 <a href="#projects" class="px-8 py-3 rounded-xl bg-white text-black font-bold hover:scale-105 transition-transform">
                     Explore Work
                 </a>
-                <a href="{{ profile.social.github }}" target="_blank" class="px-8 py-3 rounded-xl glass-panel hover:bg-white/5 border border-white/10 font-bold transition-all">
+                <a href="{{ profile.contact_info.github }}" target="_blank" class="px-8 py-3 rounded-xl glass-panel hover:bg-white/5 border border-white/10 font-bold transition-all">
                     View GitHub
                 </a>
             </div>
@@ -71,6 +71,29 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<section id="about" class="py-24 px-4 bg-black/30 border-y border-white/5">
+    <div class="max-w-4xl mx-auto text-center">
+        <h2 class="text-3xl font-bold mb-8 text-white">About Me</h2>
+        <p class="text-xl text-gray-300 leading-relaxed font-light">
+            {{ profile.about }}
+        </p>
+        <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
+            <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
+                <h3 class="text-primary font-bold mb-2">Research</h3>
+                <p class="text-sm text-gray-400">Sparse Matrix Optimization & HPC Algorithms.</p>
+            </div>
+            <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
+                <h3 class="text-secondary font-bold mb-2">Engineering</h3>
+                <p class="text-sm text-gray-400">Production-grade FastAPI, Docker, and Microservices.</p>
+            </div>
+            <div class="p-6 rounded-2xl bg-white/5 border border-white/10">
+                <h3 class="text-accent font-bold mb-2">Innovation</h3>
+                <p class="text-sm text-gray-400">LLM Agents, RAG Pipelines, and Computer Vision.</p>
             </div>
         </div>
     </div>
