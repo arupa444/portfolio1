@@ -5,10 +5,12 @@ profile = {
     "role": "AI Engineer & Systems Architect",
     "tagline": "Building the nervous systems of tomorrow's AI.",
     "sub_tagline": "I bridge the gap between Research Mathematics and Production Systems.",
-    "social": {
-        "github": "https://github.com/arupa444",
-        "linkedin": "https://www.linkedin.com/in/arupa-nanda-swain/",
-        "email": "arupaswain7735@gmail.com"
+    "contact_info": {
+        "phone": "+91 7735460467",
+        "email": "arupaswain7735@gmail.com",
+        "location": "Hyderabad, Telangana, 500081",
+        "linkedin": "linkedin.com/in/arupa-nanda-swain",
+        "github": "github.com/arupa444"
     },
     "about": """
         I don't just train models; I engineer intelligence. My work spans the full spectrum: 
