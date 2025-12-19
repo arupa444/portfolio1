@@ -64,7 +64,38 @@
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #030014; }
         ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        /* --- CHATBOT MESSAGE STYLING --- */
+        .bot-msg strong {
+            color: #06b6d4; /* Cyan color for bold text */
+            font-weight: 700;
+        }
+
+        .bot-msg ul {
+            list-style-type: disc;
+            margin-left: 1.25rem; /* Indent bullets */
+            margin-top: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .bot-msg li {
+            margin-bottom: 0.25rem;
+        }
+
+        .bot-msg p {
+            margin-bottom: 0.5rem;
+        }
+
+        .bot-msg p:last-child {
+            margin-bottom: 0;
+        }
+
+        .bot-msg a {
+            color: #06b6d4;
+            text-decoration: underline;
+        }
     </style>
+    <!-- Add Marked.js for Text Formatting -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body class="antialiased overflow-x-hidden selection:bg-purple-500/30">
 
@@ -110,29 +141,31 @@
     <!-- CHATBOT WIDGET -->
     <div id="ai-widget" class="fixed bottom-6 right-6 z-50 flex flex-col items-end">
 
-        <!-- Chat Window (Hidden) -->
-        <div id="chat-window" class="hidden mb-4 w-[350px] md:w-[400px] h-[500px] bg-[#0a0f1c] border border-cyan/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col backdrop-blur-xl">
+        <!-- Chat Window -->
+        <div id="chat-window" class="hidden mb-4 w-[350px] md:w-[400px] h-[500px] bg-[#0a0f1c] border border-cyan/30 rounded-2xl shadow-2xl overflow-hidden flex flex-col backdrop-blur-xl transition-all duration-300 transform scale-95 opacity-0 origin-bottom-right" style="display: none;">
             <!-- Header -->
             <div class="bg-cyan/10 p-4 border-b border-white/5 flex justify-between items-center">
                 <div class="flex items-center gap-3">
                     <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                    <span class="font-mono text-sm font-bold text-white">Arupa.ai <span class="text-cyan">NeuralNet</span></span>
+                    <span class="font-mono text-sm font-bold text-white">icElit.ai <span class="text-cyan">NeuralNet</span></span>
                 </div>
-                <button onclick="toggleChat()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
+                <button onclick="toggleChat()" class="text-gray-400 hover:text-white transition-colors"><i class="fa-solid fa-times"></i></button>
             </div>
 
             <!-- Messages Area -->
             <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-4 text-sm font-light">
                 <!-- Intro Message -->
-                <div class="bg-white/5 p-3 rounded-lg rounded-tl-none border border-white/5 text-gray-300">
-                     I'm ready to discuss AI solutions or share insights on my work.
+                <div class="flex justify-start">
+                    <div class="bg-white/5 p-3 rounded-lg rounded-tl-none border border-white/5 text-gray-300 text-xs leading-relaxed">
+                        System initialized. I have full access to the resumes of Arupa, Ashutosh, and Daniel.
+                    </div>
                 </div>
             </div>
 
             <!-- Input Area -->
             <div class="p-4 bg-deep border-t border-white/5 relative">
                 <input type="text" id="chat-input" placeholder="Ask about our engineering team..."
-                       class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-3 text-white focus:outline-none focus:border-cyan text-sm pr-10"
+                       class="w-full bg-white/5 border border-white/10 rounded-full px-4 py-3 text-white focus:outline-none focus:border-cyan text-sm pr-10 transition-colors"
                        onkeypress="handleChatKey(event)">
                 <button onclick="sendMessage()" class="absolute right-6 top-1/2 -translate-y-1/2 text-cyan hover:text-white transition-colors">
                     <i class="fa-solid fa-paper-plane"></i>
@@ -147,10 +180,26 @@
     </div>
 
     <script>
-        // CHATBOT LOGIC
+        // --- GLOBAL FUNCTIONS (Must be here for HTML onclick/onkeydown to work) ---
+
         const toggleChat = () => {
-            const win = document.getElementById('chat-window');
-            win.classList.toggle('hidden');
+            const chatWindow = document.getElementById('chat-window');
+            if (!chatWindow) return; // Safety check
+
+            if (chatWindow.style.display === 'none' || chatWindow.style.display === '') {
+                chatWindow.style.display = 'flex';
+                // Small delay to allow display:flex to apply before transition
+                requestAnimationFrame(() => {
+                    chatWindow.classList.remove('scale-95', 'opacity-0');
+                    chatWindow.classList.add('scale-100', 'opacity-100');
+                });
+            } else {
+                chatWindow.classList.remove('scale-100', 'opacity-100');
+                chatWindow.classList.add('scale-95', 'opacity-0');
+                setTimeout(() => {
+                    chatWindow.style.display = 'none';
+                }, 300);
+            }
         };
 
         const handleChatKey = (e) => {
@@ -160,29 +209,35 @@
         const sendMessage = async () => {
             const input = document.getElementById('chat-input');
             const msgs = document.getElementById('chat-messages');
-            const text = input.value.trim();
 
+            // Safety checks
+            if (!input || !msgs) return;
+
+            const text = input.value.trim();
             if (!text) return;
 
-            // Add User Message
+            // 1. Add User Message
             msgs.innerHTML += `
                 <div class="flex justify-end">
-                    <div class="bg-cyan/20 text-white p-3 rounded-lg rounded-tr-none border border-cyan/30 max-w-[80%]">
-                        ${text}
+                    <div class="bg-cyan/20 text-white p-3 rounded-lg rounded-tr-none border border-cyan/30 max-w-[85%] text-sm">
+                        ${text.replace(/</g, "&lt;").replace(/>/g, "&gt;")} <!-- Basic sanitization -->
                     </div>
                 </div>`;
 
             input.value = '';
             msgs.scrollTop = msgs.scrollHeight;
 
-            // Show loading state
+            // 2. Add Loading State
             const loadingId = 'loading-' + Date.now();
             msgs.innerHTML += `
                 <div id="${loadingId}" class="flex justify-start">
-                    <div class="bg-white/5 text-gray-400 p-3 rounded-lg rounded-tl-none border border-white/5 text-xs font-mono">
-                        Thinking...
+                    <div class="bg-white/5 text-gray-400 p-3 rounded-lg rounded-tl-none border border-white/5 text-xs font-mono flex items-center gap-2">
+                        <span class="w-1.5 h-1.5 bg-cyan rounded-full animate-bounce"></span>
+                        <span class="w-1.5 h-1.5 bg-cyan rounded-full animate-bounce delay-100"></span>
+                        <span class="w-1.5 h-1.5 bg-cyan rounded-full animate-bounce delay-200"></span>
                     </div>
                 </div>`;
+            msgs.scrollTop = msgs.scrollHeight;
 
             try {
                 const res = await fetch('/chat', {
@@ -193,46 +248,69 @@
                 const data = await res.json();
 
                 // Remove loading
-                document.getElementById(loadingId).remove();
+                const loader = document.getElementById(loadingId);
+                if(loader) loader.remove();
 
-                // Add Bot Message
+                // 3. PARSE MARKDOWN TO HTML
+                // Check if 'marked' library is loaded
+                let rawHtml;
+                if (typeof marked !== 'undefined') {
+                    rawHtml = marked.parse(data.response);
+                } else {
+                    rawHtml = data.response; // Fallback if marked is missing
+                    console.warn('Marked.js library not found');
+                }
+
+                // 4. Add Bot Message
                 msgs.innerHTML += `
                     <div class="flex justify-start">
-                        <div class="bg-white/5 text-gray-300 p-3 rounded-lg rounded-tl-none border border-white/5 max-w-[90%]">
-                            ${data.response.replace(/\n/g, '<br>')}
+                        <div class="bot-msg bg-white/5 text-gray-300 p-3 rounded-lg rounded-tl-none border border-white/5 max-w-[90%] text-sm leading-relaxed overflow-hidden">
+                            ${rawHtml}
                         </div>
                     </div>`;
 
             } catch (err) {
-                document.getElementById(loadingId).innerText = "Error connecting to Neural Net.";
+                console.error(err);
+                const loader = document.getElementById(loadingId);
+                if(loader) loader.innerText = "Connection lost.";
             }
 
             msgs.scrollTop = msgs.scrollHeight;
         };
+
+        // --- INITIALIZATION ON DOM LOAD (Prevents crashes if elements are missing) ---
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // 1. Initialize Tilt (Safely)
+            const tiltCards = document.querySelectorAll(".tilt-card");
+            if (typeof VanillaTilt !== 'undefined' && tiltCards.length > 0) {
+                VanillaTilt.init(tiltCards, {
+                    max: 5,
+                    speed: 400,
+                    glare: true,
+                    "max-glare": 0.2,
+                    scale: 1.02
+                });
+            }
+
+            // 2. Navbar Scroll Effect (Safely)
+            const nav = document.getElementById('navbar');
+            if (nav) {
+                window.addEventListener('scroll', () => {
+                    if(window.scrollY > 20) {
+                        nav.classList.add('shadow-xl', 'bg-[#0f0b1e]/90');
+                        nav.classList.remove('bg-transparent'); // Logic fix: Remove transparent
+                    } else {
+                        nav.classList.remove('shadow-xl', 'bg-[#0f0b1e]/90'); // Logic fix: Remove color
+                        nav.classList.add('bg-transparent');    // Logic fix: Add transparent
+                    }
+                });
+            }
+        });
     </script>
 
     <!-- Scripts -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/vanilla-tilt/1.8.0/vanilla-tilt.min.js"></script>
-    <script>
-        // Initialize Tilt on Cards
-        VanillaTilt.init(document.querySelectorAll(".tilt-card"), {
-            max: 5,
-            speed: 400,
-            glare: true,
-            "max-glare": 0.2,
-            scale: 1.02
-        });
-
-        // Navbar scroll effect
-        window.addEventListener('scroll', () => {
-            const nav = document.getElementById('navbar');
-            if(window.scrollY > 20) {
-                nav.classList.add('shadow-xl', 'bg-[#0f0b1e]/90');
-            } else {
-                nav.classList.remove('shadow-xl', 'bg-transparent');
-            }
-        });
-    </script>
 </body>
 </html>
