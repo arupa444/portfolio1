@@ -134,161 +134,122 @@
 </div>
 
 <script>
-/**
- * THE CORE ENGINE
- * Pure JS Canvas Implementation of a Geometry Dash style runner
- */
+// --- GAME ENGINE (PATCHED v2.0) ---
 
-// --- DATA: The User's Resume as Game Levels ---
 const LEVEL_DATA = [
-    { title: "WHO AM I?", desc: "I am Arupa Nanda Swain. An AI Engineer who bridges the gap between deep mathematical research and high-scale production systems. I don't just use APIs; I build the intelligence behind them." },
-    { title: "EDUCATION", desc: "B.Tech in Computer Science & Engineering (Honors) from XIM University. My academic focus wasn't just passing exams—it was mastering Algorithms, Data Structures, and Computational Mathematics." },
-    { title: "THE R&D FOUNDATION", desc: "Before production, I spent 2 years in Research. I invented 'Contiguous Clustering' (CC)—a novel sparse matrix storage format that outperforms standard CSR formats by 10x in speed using C++." },
-    { title: "PRODUCTION ENGINEERING", desc: "I currently work at OMICS International USA. I architected an autonomous Multi-LLM pipeline (Gemini/Groq) that reduced manual journal publishing workloads by 60%." },
-    { title: "SYSTEMS AT SCALE", desc: "I built 'The Little Journal' platform for clients linked to The Times of India. I engineered a 'Truth Lens' Fake News Detector that handled real-world traffic and payment gateways." },
-    { title: "PROJECT: JOURNAL AI", desc: "A compound AI system. It takes raw metadata and orchestrates multiple Agents to write, format, and compile full research papers into LaTeX and PDF automatically." },
-    { title: "PROJECT: SWARA VISION", desc: "Blending Culture & Tech. I built a Computer Vision system using Custom CNNs to read Indian Classical Music notation (Devanagari) with 96% accuracy." },
-    { title: "CORE SKILLS: AI", desc: "LLMs (Llama, Gemini), RAG Architectures, LangChain, TensorFlow, PyTorch, Computer Vision (YOLO/OpenCV), and Vector Databases." },
-    { title: "CORE SKILLS: BACKEND", desc: "I build the rails for the AI. Expert in Python (FastAPI/Flask), C++ (High Performance), Docker, Linux, and Cloud Deployment." },
-    { title: "MISSION COMPLETE", desc: "You have decoded the profile. <br><br><strong>Phone:</strong> +91 7735460467<br><strong>Email:</strong> arupaswain7735@gmail.com<br><strong>Status:</strong> Ready to Hire." }
+    { title: "WHO AM I?", desc: "I am Arupa Nanda Swain. An AI Engineer bridging the gap between deep mathematical research and high-scale production systems." },
+    { title: "EDUCATION", desc: "B.Tech in Computer Science (Honors) from XIM University. Focused on Algorithms, Data Structures, and Computational Mathematics." },
+    { title: "THE R&D FOUNDATION", desc: "Spent 2 years in Research inventing 'Contiguous Clustering' (CC)—a sparse matrix format 10x faster than standard CSR using C++." },
+    { title: "PRODUCTION ENGINEERING", desc: "Currently at OMICS International USA. Built GenAI pipelines reducing manual journal publishing workloads by 60%." },
+    { title: "SYSTEMS AT SCALE", desc: "Built 'The Little Journal' platform for Times of India clients. Engineered a real-time 'Truth Lens' Fake News Detector." },
+    { title: "PROJECT: JOURNAL AI", desc: "Compound AI system using Gemini 2.5 & Groq. Automates research papers from metadata to final PDF compilation." },
+    { title: "PROJECT: SWARA VISION", desc: "Built a Computer Vision system using Custom CNNs to read Indian Classical Music notation with 96% accuracy." },
+    { title: "CORE SKILLS: AI", desc: "LLMs (Llama, Gemini), RAG Architectures, LangChain, TensorFlow, PyTorch, and Vector Databases." },
+    { title: "CORE SKILLS: BACKEND", desc: "Expert in Python (FastAPI/Flask), C++ (High Performance), Docker, Linux, and Cloud Deployment." },
+    { title: "HIRE ME", desc: "You've seen the data.<br><strong>Phone:</strong> +91 7735460467<br><strong>Email:</strong> arupaswain7735@gmail.com" }
 ];
 
-// --- ENGINE CONFIG ---
 const CANVAS = document.getElementById('gameCanvas');
 const CTX = CANVAS.getContext('2d');
 
-const CONFIG = {
-    gravity: 0.6,
-    jumpForce: -10.5,
-    groundHeight: 120,
-    speedBase: 7,
-    speedMax: 10,
-    levelDuration: 800 // Distance units per level
-};
-
-// --- AUDIO (Synthesized) ---
-const AudioEngine = {
+// --- AUDIO SYSTEM ---
+const Audio = {
     ctx: new (window.AudioContext || window.webkitAudioContext)(),
-    playJump() {
-        if(this.ctx.state === 'suspended') this.ctx.resume();
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'square';
-        osc.frequency.setValueAtTime(150, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);
-        gain.gain.setValueAtTime(0.1, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start();
-        osc.stop(this.ctx.currentTime + 0.1);
+    jump() {
+        if (this.ctx.state === 'suspended') this.ctx.resume();
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.frequency.setValueAtTime(150, this.ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);
+        g.gain.setValueAtTime(0.1, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(); o.stop(this.ctx.currentTime + 0.1);
     },
-    playCrash() {
-        const osc = this.ctx.createOscillator();
-        const gain = this.ctx.createGain();
-        osc.type = 'sawtooth';
-        osc.frequency.setValueAtTime(100, this.ctx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.3);
-        gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
-        osc.connect(gain);
-        gain.connect(this.ctx.destination);
-        osc.start();
-        osc.stop(this.ctx.currentTime + 0.3);
+    crash() {
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(100, this.ctx.currentTime);
+        o.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.3);
+        g.gain.setValueAtTime(0.2, this.ctx.currentTime);
+        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
+        o.connect(g); g.connect(this.ctx.destination);
+        o.start(); o.stop(this.ctx.currentTime + 0.3);
     }
 };
-
-// --- CLASSES ---
 
 class Player {
     constructor() {
         this.size = 40;
-        this.x = 150;
+        this.x = 100;
         this.y = 0;
         this.dy = 0;
         this.rotation = 0;
         this.grounded = false;
-        this.dead = false;
-        this.color = '#A855F7';
         this.trail = [];
     }
 
     update() {
-        if (this.dead) return;
-
         // Physics
-        this.dy += CONFIG.gravity;
+        this.dy += 0.8; // Gravity
         this.y += this.dy;
 
-        // Floor Collision
-        const floorY = CANVAS.height - CONFIG.groundHeight - this.size;
+        // Ground Collision
+        const floorY = CANVAS.height - 150 - this.size;
         if (this.y > floorY) {
             this.y = floorY;
             this.dy = 0;
             this.grounded = true;
-
-            // Snap rotation to nearest 90 deg
-            const remainder = this.rotation % (Math.PI / 2);
-            if (remainder !== 0) {
-                this.rotation = Math.round(this.rotation / (Math.PI / 2)) * (Math.PI / 2);
+            // Snap rotation to nearest 90
+            const r = this.rotation % (Math.PI/2);
+            if(Math.abs(r) > 0.05) {
+                this.rotation = Math.round(this.rotation / (Math.PI/2)) * (Math.PI/2);
             }
         } else {
             this.grounded = false;
-            // Rotate while jumping
-            this.rotation += 0.15;
+            this.rotation += 0.15; // Spin when jumping
         }
 
         // Trail Logic
-        this.trail.push({ x: this.x, y: this.y, r: this.rotation, alpha: 0.6 });
-        if (this.trail.length > 8) this.trail.shift();
+        if (this.grounded === false || Math.random() > 0.5) {
+            this.trail.push({x: this.x, y: this.y, r: this.rotation, a: 0.5});
+        }
+        if(this.trail.length > 8) this.trail.shift();
     }
 
     draw() {
-        if (this.dead) return;
-
         // Draw Trail
         this.trail.forEach(t => {
             CTX.save();
-            CTX.translate(t.x + this.size/2, t.y + this.size/2);
+            CTX.translate(t.x + 20, t.y + 20);
             CTX.rotate(t.r);
-            CTX.fillStyle = `rgba(168, 85, 247, ${t.alpha})`;
-            CTX.fillRect(-this.size/2, -this.size/2, this.size, this.size);
+            CTX.fillStyle = `rgba(168, 85, 247, ${t.a})`;
+            CTX.fillRect(-20, -20, 40, 40);
             CTX.restore();
-            t.alpha -= 0.08;
+            t.a -= 0.05;
         });
 
-        // Draw Player
+        // Draw Cube
         CTX.save();
-        CTX.translate(this.x + this.size/2, this.y + this.size/2);
+        CTX.translate(this.x + 20, this.y + 20);
         CTX.rotate(this.rotation);
-
-        // Neon Glow
+        CTX.fillStyle = '#A855F7'; // Purple
         CTX.shadowBlur = 20;
-        CTX.shadowColor = this.color;
+        CTX.shadowColor = '#A855F7';
+        CTX.fillRect(-20, -20, 40, 40);
 
-        // Inner Gradient
-        const grad = CTX.createLinearGradient(-this.size/2, -this.size/2, this.size/2, this.size/2);
-        grad.addColorStop(0, '#A855F7');
-        grad.addColorStop(1, '#06B6D4');
-        CTX.fillStyle = grad;
-
-        CTX.fillRect(-this.size/2, -this.size/2, this.size, this.size);
-
-        // Face (Cute robotic eye)
-        CTX.fillStyle = '#fff';
-        CTX.shadowBlur = 0;
-        CTX.fillRect(5, -5, 8, 8);
-
+        // Face Detail (Eye)
+        CTX.fillStyle = 'white';
+        CTX.fillRect(5, -5, 12, 12);
         CTX.restore();
     }
 
     jump() {
-        if (this.grounded) {
-            this.dy = CONFIG.jumpForce;
+        if(this.grounded) {
+            this.dy = -14; // Stronger Jump
             this.grounded = false;
-            AudioEngine.playJump();
-            // Jump particles
-            Game.spawnParticles(this.x, this.y + this.size, 10, '#fff');
+            Audio.jump();
         }
     }
 }
@@ -297,92 +258,85 @@ class Obstacle {
     constructor(x, type) {
         this.x = x;
         this.type = type; // 'spike' or 'block'
-        this.markedForDeletion = false;
-        this.size = 40;
+        this.w = 40;
+        this.h = type === 'spike' ? 40 : 60;
+        this.marked = false;
     }
 
     update(speed) {
         this.x -= speed;
-        if (this.x < -100) this.markedForDeletion = true;
+        if (this.x < -100) this.marked = true;
     }
 
     draw() {
         CTX.save();
-        CTX.translate(this.x, CANVAS.height - CONFIG.groundHeight - this.size);
+        const floorY = CANVAS.height - 150;
+        CTX.translate(this.x, floorY - this.h);
 
         CTX.shadowBlur = 15;
-        CTX.shadowColor = '#DC2626'; // Red glow
-        CTX.fillStyle = '#DC2626';
+        CTX.shadowColor = '#ef4444'; // Red Glow
+        CTX.fillStyle = '#ef4444';
 
-        if (this.type === 'spike') {
+        if(this.type === 'spike') {
             CTX.beginPath();
-            CTX.moveTo(0, this.size);
-            CTX.lineTo(this.size/2, 0);
-            CTX.lineTo(this.size, this.size);
-            CTX.closePath();
+            CTX.moveTo(0, 40);
+            CTX.lineTo(20, 0);
+            CTX.lineTo(40, 40);
             CTX.fill();
         } else {
-            CTX.fillRect(0, 0, this.size, this.size);
-            // Detail
-            CTX.fillStyle = '#000';
-            CTX.fillRect(10, 10, this.size-20, this.size-20);
+            CTX.fillRect(0, 0, 40, 60);
+            // Block Detail
+            CTX.fillStyle = '#7f1d1d';
+            CTX.fillRect(10, 10, 20, 40);
         }
         CTX.restore();
     }
 
-    checkCollision(player) {
-        // Hitbox padding (make it forgiving)
-        const padding = 8;
-        const ox = this.x + padding;
-        const oy = CANVAS.height - CONFIG.groundHeight - this.size + padding;
-        const ow = this.size - padding*2;
-        const oh = this.size - padding*2;
+    collide(p) {
+        // Hitbox padding for fairness
+        const pad = 8;
+        const floorY = CANVAS.height - 150;
 
-        const px = player.x + padding;
-        const py = player.y + padding;
-        const pw = player.size - padding*2;
-        const ph = player.size - padding*2;
+        const ox = this.x + pad;
+        const oy = floorY - this.h + pad;
+        const ow = this.w - (pad*2);
+        const oh = this.h - (pad*2);
 
-        if (
-            px < ox + ow &&
-            px + pw > ox &&
-            py < oy + oh &&
-            py + ph > oy
-        ) {
-            return true;
-        }
-        return false;
+        const px = p.x + pad;
+        const py = p.y + pad;
+        const ps = p.size - (pad*2);
+
+        return (px < ox + ow && px + ps > ox && py < oy + oh && py + ps > oy);
     }
 }
 
-// --- GAME STATE MANAGEMENT ---
 const Game = {
-    state: 'MENU', // MENU, PLAY, PAUSED, OVER
+    state: 'MENU',
+    level: 1,
+    score: 0,
+    speed: 8,
+    attempt: 1,
     player: null,
     obstacles: [],
-    particles: [],
-    frame: 0,
-    score: 0,
-    level: 1,
-    currentSpeed: CONFIG.speedBase,
-    levelDistance: 0,
-    bgHue: 250,
-    attempt: 1,
 
-    init() {
-        this.player = new Player();
+    start() {
+        document.getElementById('startScreen').style.display = 'none';
         this.resize();
         window.addEventListener('resize', () => this.resize());
 
         // Input Handling
-        const jumpAction = (e) => {
-            if (e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
-            if (this.state === 'PLAY') this.player.jump();
+        const jump = (e) => {
+            if(this.state === 'PLAY') {
+               // Allow Space, ArrowUp, Click, Tap
+               if(e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
+               this.player.jump();
+            }
         };
-        window.addEventListener('keydown', jumpAction);
-        window.addEventListener('mousedown', jumpAction);
-        window.addEventListener('touchstart', (e) => { e.preventDefault(); if(this.state === 'PLAY') this.player.jump(); });
+        window.addEventListener('keydown', jump);
+        window.addEventListener('mousedown', jump);
+        window.addEventListener('touchstart', (e) => { e.preventDefault(); jump(e); });
 
+        this.resetLevel();
         this.loop();
     },
 
@@ -391,55 +345,53 @@ const Game = {
         CANVAS.height = window.innerHeight;
     },
 
-    start() {
-        document.getElementById('startScreen').style.opacity = '0';
-        setTimeout(() => document.getElementById('startScreen').style.display = 'none', 500);
-        this.reset();
-        this.state = 'PLAY';
-    },
-
-    reset() {
-        this.player = new Player();
-        this.obstacles = [];
-        this.particles = [];
-        this.score = 0;
-        this.level = 1;
-        this.levelDistance = 0;
-        this.currentSpeed = CONFIG.speedBase;
-        this.frame = 0;
-        this.updateHUD();
-    },
-
-    restartLevel() {
+    resetLevel() {
         document.getElementById('gameOver').classList.add('hidden');
         this.player = new Player();
-        this.obstacles = []; // Clear obstacles
-        this.levelDistance = 0; // Reset progress for this level only
+        this.obstacles = [];
+        this.score = 0;
         this.state = 'PLAY';
-        this.attempt++;
+
+        // Force spawn an initial obstacle so player sees something immediately
+        setTimeout(() => {
+            if(this.state === 'PLAY') this.obstacles.push(new Obstacle(CANVAS.width + 100, 'spike'));
+        }, 1000);
+
         this.updateHUD();
     },
 
-    spawnObstacle() {
-        // Randomly spawn spikes. Difficulty increases with level.
-        // Logic: Spawn min distance + random.
-        const minGap = 400 - (this.level * 15);
+    nextLevel() {
+        document.getElementById('infoModal').classList.add('hidden');
+        if(this.level >= 10) { window.location.href = '/#contact'; return; }
+        this.level++;
+        this.speed += 1; // Increase speed per level
+        this.resetLevel();
+    },
 
-        // Find last obstacle x
-        let lastX = CANVAS.width;
+    // --- FIXED SPAWN LOGIC ---
+    spawnObstacle() {
+        // 1. Get position of the last obstacle
+        let lastX = -1000; // If empty, assume last one was far left (safe to spawn)
+
         if (this.obstacles.length > 0) {
             lastX = this.obstacles[this.obstacles.length - 1].x;
         }
 
-        if (CANVAS.width - lastX > minGap) {
-            if (Math.random() < 0.03 + (this.level * 0.005)) {
-                // Determine pattern
-                const type = Math.random() > 0.8 ? 'block' : 'spike';
+        // 2. Calculate Gap
+        const currentGap = CANVAS.width - lastX;
 
-                // Double spike chance
-                if (Math.random() > 0.7 && this.level > 2) {
+        // 3. Determine Min Gap required (decreases slightly as you level up to make it harder)
+        const minGap = 450 - (this.level * 10);
+
+        // 4. Spawn Check
+        if (currentGap > minGap) {
+            // 5% chance per frame to spawn IF gap is clear
+            if (Math.random() < 0.05) {
+                const type = Math.random() > 0.6 ? 'block' : 'spike';
+                // Double spike chance for higher levels
+                if(this.level > 2 && Math.random() > 0.7) {
                     this.obstacles.push(new Obstacle(CANVAS.width, 'spike'));
-                    this.obstacles.push(new Obstacle(CANVAS.width + 45, 'spike'));
+                    this.obstacles.push(new Obstacle(CANVAS.width + 45, 'spike')); // Double spike
                 } else {
                     this.obstacles.push(new Obstacle(CANVAS.width, type));
                 }
@@ -447,182 +399,113 @@ const Game = {
         }
     },
 
-    spawnParticles(x, y, count, color) {
-        for(let i=0; i<count; i++) {
-            this.particles.push({
-                x: x, y: y,
-                vx: (Math.random() - 0.5) * 8,
-                vy: (Math.random() - 0.5) * 8,
-                life: 1,
-                color: color
-            });
-        }
-    },
-
-    nextLevel() {
-        document.getElementById('infoModal').classList.add('hidden');
-        if (this.level >= 10) {
-            // End Game logic could go here, but we just let them run forever or restart
-             window.location.href = "/#contact"; // Redirect to hire
-             return;
-        }
-        this.level++;
-        this.levelDistance = 0;
-        this.currentSpeed += 0.5;
-        this.bgHue += 30; // Shift colors
-        this.state = 'PLAY';
-    },
-
     updateHUD() {
-        document.getElementById('levelDisplay').innerText = `LVL ${this.level.toString().padStart(2, '0')}`;
+        document.getElementById('levelDisplay').innerText = `LVL ${this.level.toString().padStart(2,'0')}`;
         document.getElementById('attemptDisplay').innerText = this.attempt;
-        const progress = Math.min(100, (this.levelDistance / CONFIG.levelDuration) * 100);
-        document.getElementById('progressBar').style.width = `${progress}%`;
-        document.getElementById('progressText').innerText = `${Math.floor(progress)}%`;
+
+        // Level complete at score 1000
+        const pct = Math.min(100, Math.floor((this.score / 1000) * 100));
+        document.getElementById('progressBar').style.width = `${pct}%`;
+        document.getElementById('progressText').innerText = `${pct}%`;
+
+        if (this.score > 1000) {
+            this.state = 'PAUSE';
+            this.showModal();
+        }
     },
 
-    showLevelInfo() {
-        this.state = 'PAUSED';
-        const data = LEVEL_DATA[this.level - 1];
-
-        document.getElementById('modalLevelNum').innerText = this.level.toString().padStart(2, '0');
-        document.getElementById('modalTitle').innerText = data.title;
-        document.getElementById('modalDesc').innerHTML = data.desc;
-
-        const modal = document.getElementById('infoModal');
-        modal.classList.remove('hidden');
+    showModal() {
+        const d = LEVEL_DATA[this.level-1];
+        document.getElementById('modalLevelNum').innerText = this.level.toString().padStart(2,'0');
+        document.getElementById('modalTitle').innerText = d.title;
+        document.getElementById('modalDesc').innerHTML = d.desc;
+        document.getElementById('infoModal').classList.remove('hidden');
     },
 
-    gameOver() {
+    fail() {
         this.state = 'OVER';
-        this.player.dead = true;
-        AudioEngine.playCrash();
-        this.spawnParticles(this.player.x, this.player.y, 50, this.player.color);
-
-        // Camera Shake effect (simulated)
-        CANVAS.style.transform = 'translate(5px, 5px)';
-        setTimeout(() => CANVAS.style.transform = 'translate(-5px, -5px)', 50);
-        setTimeout(() => CANVAS.style.transform = 'translate(0, 0)', 100);
-
-        document.getElementById('failLevel').innerText = this.level.toString().padStart(2, '0');
-        setTimeout(() => {
-            document.getElementById('gameOver').classList.remove('hidden');
-        }, 500);
+        this.attempt++;
+        Audio.crash();
+        document.getElementById('failLevel').innerText = this.level.toString().padStart(2,'0');
+        document.getElementById('gameOver').classList.remove('hidden');
     },
 
-    drawBackground() {
-        // Gradient Sky
-        const grad = CTX.createLinearGradient(0, 0, 0, CANVAS.height);
-        grad.addColorStop(0, `hsl(${this.bgHue}, 60%, 10%)`);
-        grad.addColorStop(1, `hsl(${this.bgHue}, 60%, 5%)`);
-        CTX.fillStyle = grad;
-        CTX.fillRect(0, 0, CANVAS.width, CANVAS.height);
-
-        // Moving Grid Floor
-        CTX.save();
-        CTX.strokeStyle = `hsl(${this.bgHue}, 80%, 50%)`;
-        CTX.lineWidth = 2;
-        CTX.shadowBlur = 10;
-        CTX.shadowColor = `hsl(${this.bgHue}, 80%, 50%)`;
-
-        const groundY = CANVAS.height - CONFIG.groundHeight;
-
-        // Horizontal Line
-        CTX.beginPath();
-        CTX.moveTo(0, groundY);
-        CTX.lineTo(CANVAS.width, groundY);
-        CTX.stroke();
-
-        // Vertical Perspective Lines
-        // Calculate offset based on distance traveled
-        const offset = (this.score * this.currentSpeed) % 100;
-
-        // 3D Grid Effect
-        for (let i = -100; i < CANVAS.width + 100; i += 100) {
-            // Draw lines on the floor plane
-            // Simple parallax: x moves left
-            let x = i - offset;
-
-            // Draw angular lines for perspective
-            CTX.beginPath();
-            CTX.moveTo(x, groundY);
-            // Angle them outwards to look like a floor
-            let bottomX = (x - CANVAS.width/2) * 2 + CANVAS.width/2;
-            CTX.lineTo(bottomX, CANVAS.height);
-            CTX.stroke();
-        }
-        CTX.restore();
-
-        // Background Stars
-        CTX.fillStyle = '#fff';
-        for(let i=0; i<50; i++) {
-             // Deterministic stars based on frame to avoid flickering,
-             // but here we just draw static ones for perf or simple moving ones
-             let sx = (i * 137 + this.frame * 0.5) % CANVAS.width;
-             let sy = (i * 59) % (CANVAS.height - CONFIG.groundHeight);
-             CTX.globalAlpha = Math.sin(this.frame * 0.05 + i) * 0.5 + 0.5;
-             CTX.fillRect(sx, sy, 2, 2);
-        }
-        CTX.globalAlpha = 1;
+    restartLevel() {
+        this.resetLevel();
     },
 
     loop() {
-        if (this.state !== 'PAUSED') {
-            CTX.clearRect(0, 0, CANVAS.width, CANVAS.height);
-            this.drawBackground();
+        if(this.state === 'PLAY') {
+            CTX.clearRect(0,0, CANVAS.width, CANVAS.height);
 
-            if (this.state === 'PLAY') {
-                this.frame++;
-                this.score++;
-                this.levelDistance += 1;
-                this.updateHUD();
+            // --- Background Drawing ---
+            const floorY = CANVAS.height - 150;
 
-                // Level Progress Check
-                if (this.levelDistance > CONFIG.levelDuration) {
-                    this.showLevelInfo();
+            // Sky Gradient
+            const grad = CTX.createLinearGradient(0,0,0,CANVAS.height);
+            grad.addColorStop(0, '#020005');
+            grad.addColorStop(1, '#1e0b36');
+            CTX.fillStyle = grad;
+            CTX.fillRect(0,0, CANVAS.width, CANVAS.height);
+
+            // 3D Grid Floor
+            CTX.save();
+            CTX.beginPath();
+            CTX.moveTo(0, floorY);
+            CTX.lineTo(CANVAS.width, floorY);
+            CTX.strokeStyle = '#a855f7';
+            CTX.lineWidth = 2;
+            CTX.shadowBlur = 10;
+            CTX.shadowColor = '#a855f7';
+            CTX.stroke();
+
+            // Moving Perspective Lines
+            const offset = (this.score * this.speed) % 100;
+            CTX.strokeStyle = 'rgba(168, 85, 247, 0.2)';
+            CTX.lineWidth = 1;
+
+            for(let x = -150; x < CANVAS.width + 150; x += 100) {
+                // Perspective math to make floor look 3D
+                CTX.beginPath();
+                CTX.moveTo(x - offset, floorY);
+                // Fan out the lines at bottom
+                let bx = (x - offset - CANVAS.width/2) * 4 + CANVAS.width/2;
+                CTX.lineTo(bx, CANVAS.height);
+                CTX.stroke();
+            }
+            CTX.restore();
+
+            // --- Game Updates ---
+            this.score += 1;
+            this.spawnObstacle(); // New Fixed Logic
+
+            this.player.update();
+            this.player.draw();
+
+            this.obstacles.forEach((o, i) => {
+                o.update(this.speed);
+                o.draw();
+
+                if(o.collide(this.player)) {
+                    this.fail();
                 }
 
-                this.spawnObstacle();
-
-                // Player Update
-                this.player.update();
-
-                // Obstacles Update
-                this.obstacles.forEach((obs, index) => {
-                    obs.update(this.currentSpeed);
-                    obs.draw();
-
-                    if (obs.checkCollision(this.player)) {
-                        this.gameOver();
-                    }
-                    if (obs.markedForDeletion) {
-                        this.obstacles.splice(index, 1);
-                    }
-                });
-            }
-
-            // Always Draw Player (even if dead for particle effect)
-            if(this.player) this.player.draw();
-
-            // Particles
-            this.particles.forEach((p, i) => {
-                p.x += p.vx;
-                p.y += p.vy;
-                p.life -= 0.03;
-                CTX.fillStyle = p.color;
-                CTX.globalAlpha = p.life;
-                CTX.fillRect(p.x, p.y, 4, 4);
-                if(p.life <= 0) this.particles.splice(i, 1);
+                // Cleanup off-screen
+                if(o.marked) this.obstacles.splice(i, 1);
             });
-            CTX.globalAlpha = 1;
-        }
 
+            this.updateHUD();
+        }
         requestAnimationFrame(() => this.loop());
     }
 };
 
-// Initialize
-window.onload = () => Game.init();
-
+// Start immediately on load if needed, or wait for button
+window.onload = () => {
+    Game.resize();
+    // Pre-draw start screen
+    CTX.fillStyle = '#050505';
+    CTX.fillRect(0,0,CANVAS.width, CANVAS.height);
+};
 </script>
 {% endblock %}
