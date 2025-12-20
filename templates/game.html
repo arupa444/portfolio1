@@ -1,511 +1,626 @@
 {% extends "base.html" %}
 
 {% block content %}
-<!-- Font for the Game (Orbitron looks Cyberpunk) -->
-<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap" rel="stylesheet">
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
 
 <style>
-    /* Game Specific Styles */
+    /* --- VISUALS --- */
+    :root {
+        --primary: #c084fc; /* Brighter Purple */
+        --secondary: #22d3ee; /* Brighter Cyan */
+        --bg: #0a0a0f;
+    }
+
+    body { background: var(--bg); overflow: hidden; touch-action: none; }
     .game-font { font-family: 'Orbitron', sans-serif; }
+    .ui-font { font-family: 'Rajdhani', sans-serif; }
 
-    .scanline {
-        position: fixed;
-        left: 0; top: 0; width: 100%; height: 100%;
-        background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.2));
-        background-size: 100% 4px;
-        pointer-events: none;
-        z-index: 50;
-        opacity: 0.3;
-    }
-
-    .vignette {
-        position: fixed;
-        left: 0; top: 0; width: 100%; height: 100%;
-        background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.8) 100%);
-        pointer-events: none;
-        z-index: 49;
+    /* Brighter UI Overlay */
+    .hud-panel {
+        background: rgba(0, 0, 0, 0.6);
+        backdrop-filter: blur(8px);
+        border: 1px solid rgba(255,255,255,0.2);
+        box-shadow: 0 4px 30px rgba(0,0,0,0.3);
+        border-radius: 12px;
     }
 
-    /* Info Modal Animation */
-    @keyframes slideIn {
-        from { transform: translateY(50px); opacity: 0; }
-        to { transform: translateY(0); opacity: 1; }
+    /* Menu Grid */
+    .level-card {
+        background: linear-gradient(145deg, #1a1a20, #0f0f12);
+        border: 1px solid #333;
+        transition: all 0.2s ease;
+        position: relative;
+        overflow: hidden;
     }
-    .modal-anim { animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .level-card:hover {
+        border-color: var(--secondary);
+        transform: translateY(-4px);
+        box-shadow: 0 0 20px rgba(34, 211, 238, 0.3);
+    }
+    .level-card.locked { opacity: 0.5; filter: grayscale(1); pointer-events: none; }
+    .level-card.completed { border-color: #4ade80; }
+    .level-card.completed::after {
+        content: '✓'; position: absolute; top: 5px; right: 10px; color: #4ade80; font-weight: bold;
+    }
 
-    .glitch-btn:hover {
-        animation: glitch-anim 0.3s infinite;
-        background-color: #fff;
-        color: #000;
-    }
-    @keyframes glitch-anim {
-        0% { transform: translate(0) }
-        20% { transform: translate(-2px, 2px) }
-        40% { transform: translate(-2px, -2px) }
-        60% { transform: translate(2px, 2px) }
-        80% { transform: translate(2px, -2px) }
-        100% { transform: translate(0) }
-    }
+    /* Animations */
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+    .animate-float { animation: float 3s ease-in-out infinite; }
 </style>
 
-<div class="fixed inset-0 w-full h-full bg-[#050505] overflow-hidden select-none">
+<!-- MAIN MENU -->
+<div id="mainMenu" class="absolute inset-0 z-50 flex flex-col items-center justify-center">
+    <!-- Animated BG -->
+    <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1534972195531-d756b9bfa9f2?q=80&w=2070&auto=format&fit=crop')] bg-cover opacity-20"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black"></div>
 
-    <!-- CRT Effects -->
-    <div class="scanline"></div>
-    <div class="vignette"></div>
+    <div class="relative z-10 w-full max-w-5xl px-4 text-center">
+        <h1 class="text-6xl md:text-8xl font-black text-white game-font tracking-tighter mb-4 drop-shadow-[0_0_25px_rgba(192,132,252,0.8)]">
+            NEURAL<span class="text-cyan-400">DASH</span>
+        </h1>
+        <p class="text-gray-300 font-mono tracking-widest mb-10 text-lg">SYSTEM V4.0 // READY TO DECRYPT</p>
 
-    <!-- HUD -->
-    <div class="absolute top-24 left-0 w-full px-8 flex justify-between items-start z-40 pointer-events-none">
-        <div>
-            <h1 class="text-3xl font-bold text-white tracking-widest game-font italic text-transparent bg-clip-text bg-gradient-to-r from-primary to-secondary">NEURAL DASH</h1>
-            <div class="flex items-center gap-2 mt-2">
-                <div class="w-32 h-2 bg-gray-800 rounded-full overflow-hidden border border-white/10">
-                    <div id="progressBar" class="h-full bg-gradient-to-r from-primary to-secondary w-0 transition-all duration-300"></div>
-                </div>
-                <span class="text-xs text-primary font-mono" id="progressText">0%</span>
-            </div>
+        <!-- Level Select -->
+        <div id="levelGrid" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-10">
+            <!-- JS Injects Levels Here -->
         </div>
-        <div class="text-right">
-            <p class="text-5xl game-font font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.5)]" id="levelDisplay">LVL 01</p>
-            <p class="text-gray-400 text-xs font-mono tracking-widest mt-1">ATTEMPT <span id="attemptDisplay">1</span></p>
-        </div>
-    </div>
 
-    <!-- Canvas -->
-    <canvas id="gameCanvas" class="block w-full h-full z-10"></canvas>
-
-    <!-- Start Screen -->
-    <div id="startScreen" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-500">
-        <div class="text-center space-y-6">
-            <h1 class="text-6xl md:text-8xl font-black text-white game-font italic tracking-tighter drop-shadow-[0_0_30px_rgba(168,85,247,0.8)]">
-                NEURAL<span class="text-primary">DASH</span>
-            </h1>
-            <p class="text-gray-300 font-mono text-sm md:text-base max-w-md mx-auto leading-relaxed">
-                Syncing with neural pathways...<br>
-                Avoid the <span class="text-red-500 font-bold">Red Spikes</span>.<br>
-                Complete <span class="text-secondary font-bold">10 Sectors</span> to download Arupa's data.
-            </p>
-            <button onclick="Game.start()" class="glitch-btn px-12 py-4 bg-primary text-white font-bold text-xl rounded clip-path-polygon hover:shadow-[0_0_30px_rgba(168,85,247,0.6)] transition-all game-font tracking-widest uppercase border border-white/20">
-                Initiate
-            </button>
-            <p class="text-xs text-gray-500 font-mono animate-pulse">PRESS [SPACE] OR TAP TO JUMP</p>
-        </div>
-    </div>
-
-    <!-- Info Modal (Level Complete) -->
-    <div id="infoModal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
-        <div class="modal-anim max-w-3xl w-full bg-[#0F0B1E] border-2 border-primary/50 rounded-xl shadow-[0_0_100px_rgba(168,85,247,0.2)] overflow-hidden relative">
-            <!-- Background Matrix Effect -->
-            <div class="absolute inset-0 opacity-10 bg-[url('https://media.giphy.com/media/U3qYN8S0j3bpK/giphy.gif')] bg-cover"></div>
-
-            <div class="relative z-10 p-8 md:p-12">
-                <div class="flex justify-between items-center mb-6 border-b border-white/10 pb-4">
-                    <h2 class="text-3xl font-black text-white game-font italic">
-                        SECTOR <span id="modalLevelNum" class="text-primary">01</span> <span class="text-gray-500 text-lg not-italic font-mono ml-2">/ CLEARED</span>
-                    </h2>
-                    <div class="h-3 w-3 rounded-full bg-green-500 shadow-[0_0_10px_#22c55e] animate-pulse"></div>
-                </div>
-
-                <div class="space-y-4 mb-10">
-                    <h3 id="modalTitle" class="text-2xl font-bold text-white font-mono">Identity Verified</h3>
-                    <p id="modalDesc" class="text-gray-300 text-lg leading-relaxed border-l-4 border-secondary pl-4">
-                        Loading data...
-                    </p>
-                </div>
-
-                <div class="flex justify-end">
-                    <button onclick="Game.nextLevel()" class="px-8 py-3 bg-white text-black font-bold font-mono rounded hover:bg-primary hover:text-white transition-all transform hover:scale-105 shadow-lg">
-                        RESUME SEQUENCE >>
-                    </button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Game Over -->
-    <div id="gameOver" class="hidden absolute inset-0 z-50 flex flex-col items-center justify-center bg-red-900/40 backdrop-blur-sm">
-        <h2 class="text-7xl font-black text-white game-font italic mb-2 text-shadow-red">CRASHED</h2>
-        <p class="text-white font-mono mb-8 bg-red-600/20 px-4 py-2 rounded border border-red-500/50">FATAL EXCEPTION AT SECTOR <span id="failLevel">01</span></p>
-        <button onclick="Game.restartLevel()" class="px-10 py-3 bg-red-600 text-white font-bold rounded hover:bg-red-500 transition-all shadow-[0_0_30px_rgba(220,38,38,0.5)] game-font tracking-wider">
-            RETRY SECTOR
+        <button onclick="window.location.href='/'" class="px-10 py-3 bg-white/10 border border-white/20 text-white font-bold rounded-full hover:bg-white hover:text-black transition-all ui-font tracking-widest text-lg">
+            EXIT SIMULATION
         </button>
     </div>
-
 </div>
 
+<!-- GAME HUD (Bright & Clear) -->
+<div id="gameUI" class="hidden absolute inset-0 z-40 pointer-events-none">
+    <div class="absolute top-6 left-1/2 -translate-x-1/2 w-[90%] md:w-[600px] hud-panel p-4 flex justify-between items-center">
+        <!-- Progress -->
+        <div class="flex-1 mr-6">
+            <div class="flex justify-between text-xs font-bold text-white mb-1 tracking-widest">
+                <span>PROGRESS</span>
+                <span id="pctDisplay">0%</span>
+            </div>
+            <div class="h-3 bg-black/50 rounded-full overflow-hidden border border-white/10">
+                <div id="progressBar" class="h-full bg-gradient-to-r from-purple-500 to-cyan-400 w-0 transition-all duration-75"></div>
+            </div>
+        </div>
+
+        <!-- Info -->
+        <div class="text-right border-l border-white/20 pl-6">
+            <h2 id="lvlTitle" class="text-xl font-bold text-white game-font italic">LEVEL 1</h2>
+            <div class="text-xs font-mono font-bold text-cyan-400" id="modeDisplay">CUBE MODE</div>
+        </div>
+    </div>
+
+    <!-- Tutorial Overlay -->
+    <div id="tutorialText" class="absolute bottom-20 w-full text-center">
+        <p class="text-white/80 font-bold text-2xl game-font animate-pulse bg-black/50 inline-block px-6 py-2 rounded-lg backdrop-blur-sm border border-white/10">
+            TAP / CLICK TO JUMP
+        </p>
+    </div>
+</div>
+
+<!-- WIN MODAL -->
+<div id="winModal" class="hidden absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xl">
+    <div class="bg-[#111] border border-cyan-500/50 p-1 rounded-2xl shadow-[0_0_50px_rgba(34,211,238,0.2)] max-w-lg w-full transform scale-100 mx-4">
+        <div class="bg-[#0a0a0a] p-8 rounded-xl text-center">
+            <div class="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_20px_#22c55e]">
+                <svg class="w-8 h-8 text-black" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+            </div>
+
+            <h2 class="text-3xl font-black text-white game-font mb-2">DATA DECRYPTED</h2>
+            <p class="text-gray-500 text-xs tracking-widest mb-6">SECURE CONNECTION ESTABLISHED</p>
+
+            <div class="bg-white/5 p-6 rounded-lg text-left border border-white/10 mb-8">
+                <h3 id="unlockTitle" class="text-cyan-400 font-bold text-lg mb-2 ui-font">Title</h3>
+                <p id="unlockDesc" class="text-gray-200 text-sm leading-relaxed">Description</p>
+            </div>
+
+            <div class="flex gap-3 justify-center">
+                <button onclick="Game.toMenu()" class="flex-1 py-3 bg-gray-800 text-white font-bold rounded hover:bg-gray-700 ui-font">MENU</button>
+                <button id="nextLvlBtn" onclick="Game.nextLevel()" class="flex-1 py-3 bg-gradient-to-r from-purple-600 to-cyan-600 text-white font-bold rounded hover:opacity-90 ui-font shadow-lg">
+                    NEXT LEVEL
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- GAME CANVAS -->
+<canvas id="gameCanvas" class="block w-full h-full z-10"></canvas>
+
 <script>
-// --- GAME ENGINE (PATCHED v2.0) ---
+/**
+ * NEURAL DASH V4.0 - ENGINE
+ * Polished Physics, Smart Level Gen, Bright UI
+ */
 
-const LEVEL_DATA = [
-    { title: "WHO AM I?", desc: "I am Arupa Nanda Swain. An AI Engineer bridging the gap between deep mathematical research and high-scale production systems." },
-    { title: "EDUCATION", desc: "B.Tech in Computer Science (Honors) from XIM University. Focused on Algorithms, Data Structures, and Computational Mathematics." },
-    { title: "THE R&D FOUNDATION", desc: "Spent 2 years in Research inventing 'Contiguous Clustering' (CC)—a sparse matrix format 10x faster than standard CSR using C++." },
-    { title: "PRODUCTION ENGINEERING", desc: "Currently at OMICS International USA. Built GenAI pipelines reducing manual journal publishing workloads by 60%." },
-    { title: "SYSTEMS AT SCALE", desc: "Built 'The Little Journal' platform for Times of India clients. Engineered a real-time 'Truth Lens' Fake News Detector." },
-    { title: "PROJECT: JOURNAL AI", desc: "Compound AI system using Gemini 2.5 & Groq. Automates research papers from metadata to final PDF compilation." },
-    { title: "PROJECT: SWARA VISION", desc: "Built a Computer Vision system using Custom CNNs to read Indian Classical Music notation with 96% accuracy." },
-    { title: "CORE SKILLS: AI", desc: "LLMs (Llama, Gemini), RAG Architectures, LangChain, TensorFlow, PyTorch, and Vector Databases." },
-    { title: "CORE SKILLS: BACKEND", desc: "Expert in Python (FastAPI/Flask), C++ (High Performance), Docker, Linux, and Cloud Deployment." },
-    { title: "HIRE ME", desc: "You've seen the data.<br><strong>Phone:</strong> +91 7735460467<br><strong>Email:</strong> arupaswain7735@gmail.com" }
-];
-
-const CANVAS = document.getElementById('gameCanvas');
-const CTX = CANVAS.getContext('2d');
-
-// --- AUDIO SYSTEM ---
-const Audio = {
-    ctx: new (window.AudioContext || window.webkitAudioContext)(),
-    jump() {
-        if (this.ctx.state === 'suspended') this.ctx.resume();
-        const o = this.ctx.createOscillator();
-        const g = this.ctx.createGain();
-        o.frequency.setValueAtTime(150, this.ctx.currentTime);
-        o.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.1);
-        g.gain.setValueAtTime(0.1, this.ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.1);
-        o.connect(g); g.connect(this.ctx.destination);
-        o.start(); o.stop(this.ctx.currentTime + 0.1);
-    },
-    crash() {
-        const o = this.ctx.createOscillator();
-        const g = this.ctx.createGain();
-        o.type = 'sawtooth';
-        o.frequency.setValueAtTime(100, this.ctx.currentTime);
-        o.frequency.exponentialRampToValueAtTime(10, this.ctx.currentTime + 0.3);
-        g.gain.setValueAtTime(0.2, this.ctx.currentTime);
-        g.gain.exponentialRampToValueAtTime(0.01, this.ctx.currentTime + 0.3);
-        o.connect(g); g.connect(this.ctx.destination);
-        o.start(); o.stop(this.ctx.currentTime + 0.3);
+const ASSETS = {
+    colors: {
+        cube: '#c084fc', // Purple
+        ship: '#f472b6', // Pink
+        ufo: '#22d3ee', // Cyan
+        wave: '#4ade80', // Green
+        spike: '#ef4444', // Red
+        wall: '#cbd5e1'  // Light Gray
     }
 };
 
-class Player {
-    constructor() {
-        this.size = 40;
-        this.x = 100;
-        this.y = 0;
-        this.dy = 0;
-        this.rotation = 0;
-        this.grounded = false;
-        this.trail = [];
-    }
+const LEVELS = [
+    { id: 1, name: "INITIATION", mode: 'cube', speed: 8, data: { t: "Identity", d: "Arupa Nanda Swain. AI Architect & Systems Engineer. I bridge Research & Production." } },
+    { id: 2, name: "STRUCTURE", mode: 'cube', speed: 9, data: { t: "Education", d: "B.Tech CSE (Honors) @ XIM University. Specialist in Algorithms & HPC." } },
+    { id: 3, name: "LIFT OFF", mode: 'ship', speed: 8, data: { t: "R&D Background", d: "Invented 'Contiguous Clustering' for Sparse Matrices. C++ Engine 10x faster than CSR." } },
+    { id: 4, name: "THRUST", mode: 'ship', speed: 9, data: { t: "Production", d: "OMICS International: Built Multi-LLM pipelines reducing workload by 60%." } },
+    { id: 5, name: "GRAVITY", mode: 'ufo', speed: 9, data: { t: "Systems", d: "The Little Journal: Fake News Detection System & Full Stack Publishing Platform." } },
+    { id: 6, name: "PULSE", mode: 'ufo', speed: 10, data: { t: "Project: Journal AI", d: "Automated Research Paper Generation using Gemini 2.5, Groq & LaTeX." } },
+    { id: 7, name: "WAVEFORM", mode: 'wave', speed: 9, data: { t: "Project: SwaraVision", d: "Indian Classical Music OMR using Custom CNNs (96% Accuracy)." } },
+    { id: 8, name: "FREQUENCY", mode: 'wave', speed: 11, data: { t: "Backend Skills", d: "FastAPI, Flask, Docker, Linux, C++, Go, AsyncIO, Distributed Systems." } },
+    { id: 9, name: "HYPERDRIVE", mode: 'ship', speed: 12, data: { t: "AI Skills", d: "LLMs, RAG, Agents, TensorFlow, PyTorch, Vector DBs, Computer Vision." } },
+    { id: 10, name: "TERMINAL", mode: 'wave', speed: 13, data: { t: "Contact", d: "Email: arupaswain7735@gmail.com | Phone: +91 7735460467. HIRE ME." } }
+];
 
-    update() {
-        // Physics
-        this.dy += 0.8; // Gravity
-        this.y += this.dy;
-
-        // Ground Collision
-        const floorY = CANVAS.height - 150 - this.size;
-        if (this.y > floorY) {
-            this.y = floorY;
-            this.dy = 0;
-            this.grounded = true;
-            // Snap rotation to nearest 90
-            const r = this.rotation % (Math.PI/2);
-            if(Math.abs(r) > 0.05) {
-                this.rotation = Math.round(this.rotation / (Math.PI/2)) * (Math.PI/2);
-            }
-        } else {
-            this.grounded = false;
-            this.rotation += 0.15; // Spin when jumping
-        }
-
-        // Trail Logic
-        if (this.grounded === false || Math.random() > 0.5) {
-            this.trail.push({x: this.x, y: this.y, r: this.rotation, a: 0.5});
-        }
-        if(this.trail.length > 8) this.trail.shift();
-    }
-
-    draw() {
-        // Draw Trail
-        this.trail.forEach(t => {
-            CTX.save();
-            CTX.translate(t.x + 20, t.y + 20);
-            CTX.rotate(t.r);
-            CTX.fillStyle = `rgba(168, 85, 247, ${t.a})`;
-            CTX.fillRect(-20, -20, 40, 40);
-            CTX.restore();
-            t.a -= 0.05;
-        });
-
-        // Draw Cube
-        CTX.save();
-        CTX.translate(this.x + 20, this.y + 20);
-        CTX.rotate(this.rotation);
-        CTX.fillStyle = '#A855F7'; // Purple
-        CTX.shadowBlur = 20;
-        CTX.shadowColor = '#A855F7';
-        CTX.fillRect(-20, -20, 40, 40);
-
-        // Face Detail (Eye)
-        CTX.fillStyle = 'white';
-        CTX.fillRect(5, -5, 12, 12);
-        CTX.restore();
-    }
-
-    jump() {
-        if(this.grounded) {
-            this.dy = -14; // Stronger Jump
-            this.grounded = false;
-            Audio.jump();
-        }
-    }
-}
-
-class Obstacle {
-    constructor(x, type) {
-        this.x = x;
-        this.type = type; // 'spike' or 'block'
-        this.w = 40;
-        this.h = type === 'spike' ? 40 : 60;
-        this.marked = false;
-    }
-
-    update(speed) {
-        this.x -= speed;
-        if (this.x < -100) this.marked = true;
-    }
-
-    draw() {
-        CTX.save();
-        const floorY = CANVAS.height - 150;
-        CTX.translate(this.x, floorY - this.h);
-
-        CTX.shadowBlur = 15;
-        CTX.shadowColor = '#ef4444'; // Red Glow
-        CTX.fillStyle = '#ef4444';
-
-        if(this.type === 'spike') {
-            CTX.beginPath();
-            CTX.moveTo(0, 40);
-            CTX.lineTo(20, 0);
-            CTX.lineTo(40, 40);
-            CTX.fill();
-        } else {
-            CTX.fillRect(0, 0, 40, 60);
-            // Block Detail
-            CTX.fillStyle = '#7f1d1d';
-            CTX.fillRect(10, 10, 20, 40);
-        }
-        CTX.restore();
-    }
-
-    collide(p) {
-        // Hitbox padding for fairness
-        const pad = 8;
-        const floorY = CANVAS.height - 150;
-
-        const ox = this.x + pad;
-        const oy = floorY - this.h + pad;
-        const ow = this.w - (pad*2);
-        const oh = this.h - (pad*2);
-
-        const px = p.x + pad;
-        const py = p.y + pad;
-        const ps = p.size - (pad*2);
-
-        return (px < ox + ow && px + ps > ox && py < oy + oh && py + ps > oy);
-    }
-}
+const Canvas = document.getElementById('gameCanvas');
+const ctx = Canvas.getContext('2d');
 
 const Game = {
     state: 'MENU',
-    level: 1,
-    score: 0,
-    speed: 8,
-    attempt: 1,
+    activeLevel: 0,
+    frame: 0,
+    camera: { x: 0, y: 0, shake: 0 },
+    entities: [],
+    particles: [],
+    floorY: 0,
     player: null,
-    obstacles: [],
 
-    start() {
-        document.getElementById('startScreen').style.display = 'none';
+    init() {
         this.resize();
         window.addEventListener('resize', () => this.resize());
-
-        // Input Handling
-        const jump = (e) => {
-            if(this.state === 'PLAY') {
-               // Allow Space, ArrowUp, Click, Tap
-               if(e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
-               this.player.jump();
-            }
-        };
-        window.addEventListener('keydown', jump);
-        window.addEventListener('mousedown', jump);
-        window.addEventListener('touchstart', (e) => { e.preventDefault(); jump(e); });
-
-        this.resetLevel();
+        this.setupInputs();
+        this.renderMenu();
         this.loop();
     },
 
     resize() {
-        CANVAS.width = window.innerWidth;
-        CANVAS.height = window.innerHeight;
+        Canvas.width = window.innerWidth;
+        Canvas.height = window.innerHeight;
+        this.floorY = Canvas.height - 150;
     },
 
-    resetLevel() {
-        document.getElementById('gameOver').classList.add('hidden');
-        this.player = new Player();
-        this.obstacles = [];
-        this.score = 0;
+    renderMenu() {
+        const grid = document.getElementById('levelGrid');
+        grid.innerHTML = '';
+        LEVELS.forEach((lvl, i) => {
+            const btn = document.createElement('div');
+            const isCompleted = localStorage.getItem(`lvl_${i}`) === 'true';
+            btn.className = `level-card p-4 rounded-xl cursor-pointer h-32 flex flex-col items-center justify-center ${isCompleted ? 'completed' : ''}`;
+            btn.innerHTML = `
+                <span class="text-3xl font-black text-white ui-font">${lvl.id}</span>
+                <span class="text-[10px] text-gray-400 font-mono font-bold tracking-widest mt-1">${lvl.name}</span>
+                <div class="mt-2 text-xs font-bold px-2 py-1 rounded bg-black/50" style="color:${this.getModeColor(lvl.mode)}">${lvl.mode.toUpperCase()}</div>
+            `;
+            btn.onclick = () => this.startLevel(i);
+            grid.appendChild(btn);
+        });
+    },
+
+    getModeColor(mode) { return ASSETS.colors[mode] || '#fff'; },
+
+    startLevel(idx) {
+        this.activeLevel = idx;
+        const lvl = LEVELS[idx];
+
+        document.getElementById('mainMenu').classList.add('hidden');
+        document.getElementById('gameUI').classList.remove('hidden');
+        document.getElementById('winModal').classList.add('hidden');
+        document.getElementById('lvlTitle').innerText = lvl.name;
+        document.getElementById('modeDisplay').innerText = lvl.mode.toUpperCase();
+        document.getElementById('modeDisplay').style.color = this.getModeColor(lvl.mode);
+
+        // Update Tutorial Text
+        const tut = document.querySelector('#tutorialText p');
+        if(lvl.mode === 'cube' || lvl.mode === 'ufo') tut.innerText = "TAP TO JUMP";
+        else if(lvl.mode === 'ship') tut.innerText = "HOLD TO FLY";
+        else if(lvl.mode === 'wave') tut.innerText = "HOLD TO GO UP / RELEASE TO GO DOWN";
+
+        this.resetGame();
         this.state = 'PLAY';
+    },
 
-        // Force spawn an initial obstacle so player sees something immediately
-        setTimeout(() => {
-            if(this.state === 'PLAY') this.obstacles.push(new Obstacle(CANVAS.width + 100, 'spike'));
-        }, 1000);
+    resetGame() {
+        const lvl = LEVELS[this.activeLevel];
+        this.frame = 0;
+        this.camera.x = 0;
+        this.camera.shake = 0;
+        this.entities = [];
+        this.particles = [];
 
-        this.updateHUD();
+        this.player = new Player(lvl.mode);
+        LevelGenerator.generate(lvl);
+    },
+
+    toMenu() {
+        this.state = 'MENU';
+        document.getElementById('mainMenu').classList.remove('hidden');
+        document.getElementById('gameUI').classList.add('hidden');
+        document.getElementById('winModal').classList.add('hidden');
+        this.renderMenu();
     },
 
     nextLevel() {
-        document.getElementById('infoModal').classList.add('hidden');
-        if(this.level >= 10) { window.location.href = '/#contact'; return; }
-        this.level++;
-        this.speed += 1; // Increase speed per level
-        this.resetLevel();
+        if(this.activeLevel < LEVELS.length - 1) this.startLevel(this.activeLevel + 1);
+        else this.toMenu();
     },
 
-    // --- FIXED SPAWN LOGIC ---
-    spawnObstacle() {
-        // 1. Get position of the last obstacle
-        let lastX = -1000; // If empty, assume last one was far left (safe to spawn)
+    update() {
+        if(this.state !== 'PLAY') return;
 
-        if (this.obstacles.length > 0) {
-            lastX = this.obstacles[this.obstacles.length - 1].x;
-        }
+        const lvl = LEVELS[this.activeLevel];
 
-        // 2. Calculate Gap
-        const currentGap = CANVAS.width - lastX;
+        // Camera Follow
+        this.camera.x = this.player.x - 200;
+        if(this.camera.shake > 0) {
+            this.camera.x += (Math.random() - 0.5) * this.camera.shake;
+            this.camera.y = (Math.random() - 0.5) * this.camera.shake;
+            this.camera.shake *= 0.9;
+        } else { this.camera.y = 0; }
 
-        // 3. Determine Min Gap required (decreases slightly as you level up to make it harder)
-        const minGap = 450 - (this.level * 10);
+        this.player.update(lvl.speed);
 
-        // 4. Spawn Check
-        if (currentGap > minGap) {
-            // 5% chance per frame to spawn IF gap is clear
-            if (Math.random() < 0.05) {
-                const type = Math.random() > 0.6 ? 'block' : 'spike';
-                // Double spike chance for higher levels
-                if(this.level > 2 && Math.random() > 0.7) {
-                    this.obstacles.push(new Obstacle(CANVAS.width, 'spike'));
-                    this.obstacles.push(new Obstacle(CANVAS.width + 45, 'spike')); // Double spike
-                } else {
-                    this.obstacles.push(new Obstacle(CANVAS.width, type));
-                }
-            }
-        }
-    },
-
-    updateHUD() {
-        document.getElementById('levelDisplay').innerText = `LVL ${this.level.toString().padStart(2,'0')}`;
-        document.getElementById('attemptDisplay').innerText = this.attempt;
-
-        // Level complete at score 1000
-        const pct = Math.min(100, Math.floor((this.score / 1000) * 100));
+        // Progress
+        const pct = Math.min(100, Math.floor((this.player.x / LevelGenerator.length) * 100));
         document.getElementById('progressBar').style.width = `${pct}%`;
-        document.getElementById('progressText').innerText = `${pct}%`;
+        document.getElementById('pctDisplay').innerText = `${pct}%`;
 
-        if (this.score > 1000) {
-            this.state = 'PAUSE';
-            this.showModal();
+        if(this.player.x > LevelGenerator.length) this.winLevel();
+
+        // Update Entities
+        this.entities.forEach(e => e.update());
+
+        // Particles
+        for(let i = this.particles.length - 1; i >= 0; i--) {
+            this.particles[i].update();
+            if(this.particles[i].life <= 0) this.particles.splice(i, 1);
         }
+
+        this.frame++;
     },
 
-    showModal() {
-        const d = LEVEL_DATA[this.level-1];
-        document.getElementById('modalLevelNum').innerText = this.level.toString().padStart(2,'0');
-        document.getElementById('modalTitle').innerText = d.title;
-        document.getElementById('modalDesc').innerHTML = d.desc;
-        document.getElementById('infoModal').classList.remove('hidden');
+    draw() {
+        // Clear
+        ctx.fillStyle = '#0a0a0f';
+        ctx.fillRect(0,0, Canvas.width, Canvas.height);
+
+        this.drawBackground();
+
+        ctx.save();
+        ctx.translate(-this.camera.x, -this.camera.y);
+
+        this.drawFloor();
+        this.entities.forEach(e => e.draw());
+        if(this.state === 'PLAY' || this.state === 'WIN') this.player.draw();
+        this.particles.forEach(p => p.draw());
+
+        ctx.restore();
     },
 
-    fail() {
-        this.state = 'OVER';
-        this.attempt++;
-        Audio.crash();
-        document.getElementById('failLevel').innerText = this.level.toString().padStart(2,'0');
-        document.getElementById('gameOver').classList.remove('hidden');
+    drawBackground() {
+        // Simple Grid
+        const offset = (this.frame * 2) % 100;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.05)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        for(let x = 0; x < Canvas.width; x += 100) {
+            ctx.moveTo(x - offset, 0);
+            ctx.lineTo(x - offset, Canvas.height);
+        }
+        ctx.stroke();
     },
 
-    restartLevel() {
-        this.resetLevel();
+    drawFloor() {
+        ctx.fillStyle = '#111';
+        ctx.fillRect(this.camera.x, this.floorY, Canvas.width + 100, 200);
+
+        ctx.strokeStyle = this.getModeColor(LEVELS[this.activeLevel].mode);
+        ctx.lineWidth = 4;
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = ctx.strokeStyle;
+        ctx.beginPath();
+        ctx.moveTo(this.camera.x, this.floorY);
+        ctx.lineTo(this.camera.x + Canvas.width + 100, this.floorY);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
     },
 
     loop() {
-        if(this.state === 'PLAY') {
-            CTX.clearRect(0,0, CANVAS.width, CANVAS.height);
-
-            // --- Background Drawing ---
-            const floorY = CANVAS.height - 150;
-
-            // Sky Gradient
-            const grad = CTX.createLinearGradient(0,0,0,CANVAS.height);
-            grad.addColorStop(0, '#020005');
-            grad.addColorStop(1, '#1e0b36');
-            CTX.fillStyle = grad;
-            CTX.fillRect(0,0, CANVAS.width, CANVAS.height);
-
-            // 3D Grid Floor
-            CTX.save();
-            CTX.beginPath();
-            CTX.moveTo(0, floorY);
-            CTX.lineTo(CANVAS.width, floorY);
-            CTX.strokeStyle = '#a855f7';
-            CTX.lineWidth = 2;
-            CTX.shadowBlur = 10;
-            CTX.shadowColor = '#a855f7';
-            CTX.stroke();
-
-            // Moving Perspective Lines
-            const offset = (this.score * this.speed) % 100;
-            CTX.strokeStyle = 'rgba(168, 85, 247, 0.2)';
-            CTX.lineWidth = 1;
-
-            for(let x = -150; x < CANVAS.width + 150; x += 100) {
-                // Perspective math to make floor look 3D
-                CTX.beginPath();
-                CTX.moveTo(x - offset, floorY);
-                // Fan out the lines at bottom
-                let bx = (x - offset - CANVAS.width/2) * 4 + CANVAS.width/2;
-                CTX.lineTo(bx, CANVAS.height);
-                CTX.stroke();
-            }
-            CTX.restore();
-
-            // --- Game Updates ---
-            this.score += 1;
-            this.spawnObstacle(); // New Fixed Logic
-
-            this.player.update();
-            this.player.draw();
-
-            this.obstacles.forEach((o, i) => {
-                o.update(this.speed);
-                o.draw();
-
-                if(o.collide(this.player)) {
-                    this.fail();
-                }
-
-                // Cleanup off-screen
-                if(o.marked) this.obstacles.splice(i, 1);
-            });
-
-            this.updateHUD();
-        }
         requestAnimationFrame(() => this.loop());
+        this.update();
+        this.draw();
+    },
+
+    setupInputs() {
+        const press = (e) => {
+            if(this.state !== 'PLAY') return;
+            if(e.type === 'keydown' && e.code !== 'Space' && e.code !== 'ArrowUp') return;
+            this.player.hold = true;
+            if(this.player.mode === 'cube' || this.player.mode === 'ufo') this.player.jump();
+        };
+        const release = () => { if(this.player) this.player.hold = false; };
+
+        window.addEventListener('keydown', press);
+        window.addEventListener('keyup', release);
+        window.addEventListener('mousedown', press);
+        window.addEventListener('mouseup', release);
+        window.addEventListener('touchstart', (e)=>{e.preventDefault(); press(e);});
+        window.addEventListener('touchend', release);
+    },
+
+    gameOver() {
+        this.state = 'DEAD';
+        this.camera.shake = 30;
+
+        // Spawn particles
+        for(let i=0; i<30; i++) {
+            this.particles.push(new Particle(this.player.x, this.player.y, this.player.color));
+        }
+
+        setTimeout(() => {
+            this.resetGame();
+            this.state = 'PLAY';
+        }, 800);
+    },
+
+    winLevel() {
+        this.state = 'WIN';
+        localStorage.setItem(`lvl_${this.activeLevel}`, 'true');
+        const lvl = LEVELS[this.activeLevel];
+        document.getElementById('unlockTitle').innerText = lvl.data.t;
+        document.getElementById('unlockDesc').innerText = lvl.data.d;
+        document.getElementById('winModal').classList.remove('hidden');
+
+        if(this.activeLevel === LEVELS.length - 1) document.getElementById('nextLvlBtn').classList.add('hidden');
+        else document.getElementById('nextLvlBtn').classList.remove('hidden');
     }
 };
 
-// Start immediately on load if needed, or wait for button
-window.onload = () => {
-    Game.resize();
-    // Pre-draw start screen
-    CTX.fillStyle = '#050505';
-    CTX.fillRect(0,0,CANVAS.width, CANVAS.height);
+class Player {
+    constructor(mode) {
+        this.mode = mode;
+        this.size = 30;
+        this.x = 200;
+        this.y = Game.floorY - this.size;
+        this.dy = 0;
+        this.angle = 0;
+        this.hold = false;
+        this.color = ASSETS.colors[mode];
+        this.trail = [];
+    }
+
+    update(speed) {
+        this.x += speed;
+
+        // PHYSICS
+        if (this.mode === 'cube') {
+            this.dy += 0.65;
+            this.y += this.dy;
+            if (this.y > Game.floorY - this.size) {
+                this.y = Game.floorY - this.size;
+                this.dy = 0;
+                this.angle = Math.round(this.angle / (Math.PI/2)) * (Math.PI/2);
+            } else {
+                this.angle += 0.15;
+            }
+        }
+        else if (this.mode === 'ship') {
+            this.dy += this.hold ? -0.5 : 0.4;
+            this.dy = Math.max(-6, Math.min(6, this.dy));
+            this.y += this.dy;
+            this.angle = this.dy * 0.1;
+
+            // Slide on floor/roof
+            if (this.y > Game.floorY - this.size) { this.y = Game.floorY - this.size; this.dy = 0; }
+            if (this.y < 0) { this.y = 0; this.dy = 0; }
+
+            if(this.hold && Game.frame % 3 === 0) Game.particles.push(new Particle(this.x, this.y + 15, '#fbbf24'));
+        }
+        else if (this.mode === 'ufo') {
+            this.dy += 0.5;
+            this.y += this.dy;
+            if (this.y > Game.floorY - this.size) { this.y = Game.floorY - this.size; this.dy = 0; }
+        }
+        else if (this.mode === 'wave') {
+            // FIXED WAVE PHYSICS: Constant Diagonal Speed
+            const waveSpeed = 9;
+            this.dy = this.hold ? -waveSpeed : waveSpeed;
+            this.y += this.dy;
+
+            // Slide on boundaries (Prevent Instant Death)
+            if (this.y > Game.floorY - this.size) this.y = Game.floorY - this.size;
+            if (this.y < 0) this.y = 0;
+
+            // Wave Trail
+            this.trail.push({x: this.x, y: this.y + 15});
+            if(this.trail.length > 30) this.trail.shift();
+        }
+
+        // Standard Trail
+        if(this.mode !== 'wave' && Game.frame % 4 === 0) {
+            this.trail.push({x: this.x, y: this.y, a: this.angle, alpha: 0.5});
+            if(this.trail.length > 8) this.trail.shift();
+        }
+
+        this.checkCollisions();
+    }
+
+    jump() {
+        if(this.mode === 'cube' && this.y >= Game.floorY - this.size - 5) this.dy = -14.5;
+        if(this.mode === 'ufo') this.dy = -9;
+    }
+
+    checkCollisions() {
+        const pad = 6;
+        Game.entities.forEach(e => {
+            if(this.x + this.size - pad > e.x && this.x + pad < e.x + e.w &&
+               this.y + this.size - pad > e.y && this.y + pad < e.y + e.h) {
+                Game.gameOver();
+            }
+        });
+    }
+
+    draw() {
+        // Draw Trail
+        if(this.mode === 'wave') {
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = this.color;
+            ctx.beginPath();
+            this.trail.forEach((t, i) => i === 0 ? ctx.moveTo(t.x, t.y) : ctx.lineTo(t.x, t.y));
+            ctx.stroke();
+            // Arrow Head
+            ctx.fillStyle = '#fff';
+            ctx.beginPath();
+            ctx.moveTo(this.x, this.y + 15);
+            ctx.lineTo(this.x - 10, this.y + 5);
+            ctx.lineTo(this.x - 10, this.y + 25);
+            ctx.fill();
+            return;
+        }
+
+        this.trail.forEach(t => {
+            ctx.save();
+            ctx.translate(t.x + 15, t.y + 15);
+            ctx.rotate(t.a);
+            ctx.fillStyle = this.color;
+            ctx.globalAlpha = t.alpha;
+            ctx.fillRect(-15, -15, 30, 30);
+            ctx.restore();
+            t.alpha -= 0.05;
+        });
+
+        // Player Sprite
+        ctx.save();
+        ctx.translate(this.x + 15, this.y + 15);
+        ctx.rotate(this.angle);
+
+        ctx.shadowBlur = 15;
+        ctx.shadowColor = this.color;
+        ctx.fillStyle = this.color;
+
+        if(this.mode === 'cube') {
+            ctx.fillRect(-15, -15, 30, 30);
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(-8, -8, 16, 16);
+        }
+        else if(this.mode === 'ship') {
+            ctx.beginPath(); ctx.moveTo(15,0); ctx.lineTo(-10,10); ctx.lineTo(-10,-10); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.moveTo(5,0); ctx.lineTo(-5,5); ctx.lineTo(-5,-5); ctx.fill();
+        }
+        else if(this.mode === 'ufo') {
+             ctx.beginPath(); ctx.ellipse(0, 5, 20, 8, 0, 0, Math.PI*2); ctx.fill();
+             ctx.fillStyle = '#fff'; ctx.beginPath(); ctx.arc(0, -2, 10, Math.PI, 0); ctx.fill();
+        }
+        ctx.restore();
+    }
+}
+
+class Obstacle {
+    constructor(x, y, w, h, type) {
+        this.x = x; this.y = y; this.w = w; this.h = h; this.type = type;
+    }
+    update() {}
+    draw() {
+        if(this.x < Game.camera.x - 100 || this.x > Game.camera.x + Canvas.width + 100) return;
+
+        ctx.save();
+        ctx.translate(this.x, this.y);
+
+        if(this.type === 'spike') {
+            ctx.fillStyle = ASSETS.colors.spike;
+            ctx.shadowBlur = 15; ctx.shadowColor = '#ef4444';
+            ctx.beginPath(); ctx.moveTo(0, this.h); ctx.lineTo(this.w/2, 0); ctx.lineTo(this.w, this.h); ctx.fill();
+        }
+        else if(this.type === 'block') {
+            ctx.fillStyle = '#1e1e24';
+            ctx.strokeStyle = '#fff';
+            ctx.lineWidth = 2;
+            ctx.fillRect(0,0,this.w,this.h);
+            ctx.strokeRect(0,0,this.w,this.h);
+        }
+        ctx.restore();
+    }
+}
+
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y; this.color = color;
+        this.vx = (Math.random()-0.5)*12; this.vy = (Math.random()-0.5)*12; this.life = 1;
+    }
+    update() { this.x += this.vx; this.y += this.vy; this.life -= 0.04; }
+    draw() {
+        ctx.globalAlpha = this.life; ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, 4, 4); ctx.globalAlpha = 1;
+    }
+}
+
+// --- LEVEL GEN ---
+const LevelGenerator = {
+    length: 0,
+    generate(lvl) {
+        Game.entities.push(new Obstacle(-100, Game.floorY - 1000, 50, 1000, 'block')); // Start Wall
+        let x = 800; // Safe Start Zone
+
+        const difficulty = lvl.id;
+        const len = 15 + difficulty * 2; // Number of obstacles
+
+        for(let i=0; i<len; i++) {
+            if(lvl.mode === 'cube') {
+                this.addGroundObstacle(x);
+            }
+            else if(lvl.mode === 'ship' || lvl.mode === 'ufo') {
+                if(i == 5 && i == 8){
+                    x = -10
+                    this.addAirObstacle(x);
+                }else{
+                    this.addAirObstacle(x);
+                }
+            }
+            else if(lvl.mode === 'wave') {
+                this.addTunnelObstacle(x);
+            }
+            x += 500; // Spacing
+        }
+
+        this.length = x;
+        Game.entities.push(new Obstacle(x + 500, -1000, 100, 2000, 'block')); // End Wall
+    },
+
+    addGroundObstacle(x) {
+        const type = Math.random() > 0.5 ? 'spike' : 'block';
+        if(type === 'spike') Game.entities.push(new Obstacle(x, Game.floorY - 40, 40, 40, 'spike'));
+        else Game.entities.push(new Obstacle(x, Game.floorY - 60, 60, 60, 'block'));
+    },
+
+    addAirObstacle(x) {
+        // Floating blocks or gates
+        const y = Math.random() * (Game.floorY - 150) + 50;
+        Game.entities.push(new Obstacle(x, y, 100, 100, 'block'));
+    },
+
+    addTunnelObstacle(x) {
+        // Roof and Floor blocks with gap
+        const gap = 250;
+        const center = Math.random() * (Game.floorY - gap) + (gap/2);
+
+        // Top Block
+        const h1 = center - (gap/2);
+        Game.entities.push(new Obstacle(x, 0, 80, h1, 'block'));
+
+        // Bottom Block
+        const y2 = center + (gap/2);
+        const h2 = Game.floorY - y2;
+        Game.entities.push(new Obstacle(x, y2, 80, h2, 'block'));
+    }
 };
+
+window.onload = () => Game.init();
 </script>
 {% endblock %}
