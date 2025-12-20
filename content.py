@@ -9,7 +9,7 @@ profile = {
         "phone": "+91 7735460467",
         "email": "arupaswain7735@gmail.com",
         "location": "Hyderabad, Telangana, 500081",
-        "linkedin": "linkedin.com/in/arupa-nanda-swain",
+        "linkedin": "https://www.linkedin.com/in/arupa-nanda-swain/",
         "github": "https://github.com/arupa444"
     },
     "about": """
@@ -34,7 +34,7 @@ projects = [
         """,
         "tech": ["FastAPI", "Gemini 2.5", "Groq", "LaTeX", "Pydantic"],
         "stats": ["60% Workload Reduction", "10+ Articles/Batch", "Auto-Citation"],
-        "github": "https://github.com/arupa444",
+        "github": "https://github.com/arupa444/FastAPI-Journal-Automation-with-Generative-And-AI-Compound-AI-System",
         "color": "from-blue-500 to-cyan-400"
     },
     {
@@ -49,7 +49,7 @@ projects = [
         """,
         "tech": ["C++", "Algorithm Design", "HPC", "Memory Optimization"],
         "stats": ["30-50% Memory Save", "10x Speedup", "Novel Algorithm"],
-        "github": "https://github.com/arupa444",
+        "github": "https://github.com/arupa444/Continues-Clustering-CC",
         "color": "from-purple-500 to-pink-500"
     },
     {
@@ -64,7 +64,7 @@ projects = [
         """,
         "tech": ["FastAPI", "Scraping", "SMTP", "AsyncIO"],
         "stats": ["10,000+ Contacts", "3-Phase Validation", "Auto-Rotation"],
-        "github": "https://github.com/arupa444",
+        "github": "https://github.com/arupa444/web-scraping-info-of-authors-though-API-to-automate-the-mailing",
         "color": "from-emerald-400 to-teal-500"
     },
     {
@@ -79,7 +79,7 @@ projects = [
         """,
         "tech": ["TensorFlow", "OpenCV", "CNN", "TFLite"],
         "stats": ["96% Accuracy", "4000+ Annotations", "Cultural Tech"],
-        "github": "https://github.com/arupa444",
+        "github": "https://github.com/arupa444/swaraDetection",
         "color": "from-orange-500 to-red-500"
     },
     {
@@ -94,7 +94,7 @@ projects = [
         """,
         "tech": ["Selenium", "LangChain", "Python", "Automation"],
         "stats": ["ATS Engine", "Auto-Apply", "Resume Tuning"],
-        "github": "https://github.com/arupa444",
+        "github": "https://github.com/arupa444/career-pilot-ai",
         "color": "from-indigo-500 to-blue-600"
     },
     {
@@ -109,7 +109,7 @@ projects = [
         """,
         "tech": ["Flask", "MongoDB", "Jinja2", "Stripe API"],
         "stats": ["Live Production", "40% User Growth", "Times of India Clients"],
-        "github": "https://github.com/arupa444",
+        "github": "https://the-little-journal.com/",
         "color": "from-rose-400 to-orange-300"
     },
     {
@@ -124,7 +124,7 @@ projects = [
         """,
         "tech": ["Python", "SHA-256", "Cryptography", "Distributed Systems"],
         "stats": ["Nonce Iteration", "Difficulty Adjustment", "Core Logic"],
-        "github": "https://github.com/arupa444",
+        "github": "https://github.com/arupa444/Proof-Of-Work",
         "color": "from-gray-200 to-slate-400"
     }
 ]
