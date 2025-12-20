@@ -1,5 +1,5 @@
 from flask import Flask, render_template, request, flash, redirect, url_for, abort, jsonify, session
-from content import profile, projects, skills, systemContext
+from content import profile, projects, skills, systemContext, experience
 import google.generativeai as genai
 import os
 
@@ -18,7 +18,8 @@ def index():
     return render_template('index.html',
                            profile=profile,
                            projects=projects,
-                           skills=skills)
+                           skills=skills,
+                           experience=experience)
 
 
 @app.route('/project/<project_id>')

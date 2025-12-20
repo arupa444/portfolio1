@@ -188,3 +188,45 @@ systemContext = """
         4. **Brevity:** Keep answers punchy. 2-4 sentences max.
         5. **Call to Action:** If the user seems impressed, say: "Arupa is currently available for high-impact roles. Shall I share his email?"
         """
+
+# content.py
+
+# ... (Keep profile, projects, and skills as they are) ...
+
+experience = [
+    {
+        "company": "OMICS International USA",
+        "role": "AI Developer",
+        "period": "06/2025 - Present",
+        "location": "Hyderabad",
+        "desc": "Designed LLM-powered solution integrating FastAPI, Gemini, and Groq models to automate author outreach and journal workflows, reducing manual workload by 60%."
+    },
+    {
+        "company": "XIM University (Research)",
+        "role": "HPC Research Fellow",
+        "period": "08/2024 - 05/2025",
+        "location": "Bhubaneswar",
+        "desc": "Invented 'Contiguous Clustering' (CC) sparse matrix format achieving 30-50% memory reduction and 10x acceleration in SpMV vs traditional formats (CSR/JDS). Implemented in C++."
+    },
+    {
+        "company": "The Little Journal",
+        "role": "Full-Stack Developer",
+        "period": "04/2024 - 06/2025",
+        "location": "Bengaluru",
+        "desc": "Architected a literary platform serving Times of India clients. Built end-to-end Fake News detection using LLMs and web search integration. Implemented payment gateway increasing user submissions by 40%."
+    },
+    {
+        "company": "Coincent.ai",
+        "role": "Full-Stack Developer",
+        "period": "04/2023 - 07/2023",
+        "location": "Bengaluru",
+        "desc": "Delivered doctor appointment booking platform achieving 300+ monthly appointment increase through optimized workflows and intuitive UI design."
+    },
+    {
+        "company": "CTTC",
+        "role": "Microcontroller Programmer",
+        "period": "07/2021 - 03/2022",
+        "location": "Bhubaneswar",
+        "desc": "Programmed Arduino-based motion control for 6-axis humanoid robot with servo coordination and sensor-triggered gesture responses. Optimized control systems contributing to 7L+ revenue."
+    }
+]
