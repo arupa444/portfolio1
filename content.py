@@ -10,7 +10,7 @@ profile = {
         "email": "arupaswain7735@gmail.com",
         "location": "Hyderabad, Telangana, 500081",
         "linkedin": "linkedin.com/in/arupa-nanda-swain",
-        "github": "github.com/arupa444"
+        "github": "https://github.com/arupa444"
     },
     "about": """
         I don't just train models; I engineer intelligence. My work spans the full spectrum: 
