@@ -223,7 +223,7 @@ experience = [
         "desc": "Delivered doctor appointment booking platform achieving 300+ monthly appointment increase through optimized workflows and intuitive UI design."
     },
     {
-        "company": "CTTC",
+        "company": "Central Tool Room & Training Centre (CTTC)",
         "role": "Microcontroller Programmer",
         "period": "07/2021 - 03/2022",
         "location": "Bhubaneswar",
