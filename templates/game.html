@@ -576,14 +576,7 @@ const LevelGenerator = {
                 this.addGroundObstacle(x);
             }
             else if(lvl.mode === 'ship' || lvl.mode === 'ufo') {
-                if(i == 5 && i == 8){
-                    x = -10
-                    this.addAirObstacle(x);
-                    this.addAirObstacle(x);
-                }else{
-                    this.addAirObstacle(x);
-                    this.addAirObstacle(x);
-                }
+                this.addTunnelObstacle(x);
             }
             else if(lvl.mode === 'wave') {
                 this.addTunnelObstacle(x);
